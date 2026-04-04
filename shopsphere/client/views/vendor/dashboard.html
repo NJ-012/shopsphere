@@ -1,0 +1,34 @@
+<section class="shell">
+  <div class="section-header">
+    <h1>Vendor dashboard</h1>
+    <span>{{ vm.user.shop_name }}</span>
+  </div>
+  <div class="metrics-grid">
+    <article class="summary-card"><h2>Tracked orders</h2><p>{{ vm.metrics.ordersCount || 0 }}</p></article>
+    <article class="summary-card"><h2>Featured SKUs</h2><p>{{ vm.metrics.featuredCount || 0 }}</p></article>
+    <article class="summary-card"><h2>Available stock</h2><p>{{ vm.metrics.stockUnits || 0 }}</p></article>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th rowspan="2">Category</th>
+          <th colspan="2">Inventory</th>
+          <th rowspan="2">Merchandising</th>
+        </tr>
+        <tr>
+          <th>Products</th>
+          <th>Units</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr ng-repeat="product in vm.products track by product.prod_id">
+          <td>{{ product.cat_name }}</td>
+          <td>1</td>
+          <td>{{ product.stock_qty }}</td>
+          <td>{{ product.is_featured ? 'Featured' : 'Standard' }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>

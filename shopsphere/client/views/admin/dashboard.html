@@ -1,0 +1,32 @@
+<section class="shell">
+  <div class="section-header">
+    <h1>Admin dashboard</h1>
+    <span>{{ vm.status.mode || 'loading' }}</span>
+  </div>
+  <div class="metrics-grid">
+    <article class="summary-card"><h2>Oracle connectivity</h2><p>{{ vm.status.oracleConnected ? 'Live' : 'Fallback mode' }}</p></article>
+    <article class="summary-card"><h2>Proxy origin</h2><p>{{ vm.status.clientOrigin }}</p></article>
+    <article class="summary-card"><h2>Active categories</h2><p>{{ vm.categories.length }}</p></article>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th rowspan="2">Category</th>
+          <th colspan="2">Merchandise</th>
+        </tr>
+        <tr>
+          <th>Slug</th>
+          <th>Count</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr ng-repeat="category in vm.categories track by category.cat_slug">
+          <td>{{ category.cat_name }}</td>
+          <td>{{ category.cat_slug }}</td>
+          <td>{{ category.product_count }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>

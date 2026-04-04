@@ -1,0 +1,30 @@
+<section class="shell">
+  <div class="section-header">
+    <h1>Vendor approvals</h1>
+    <span>{{ vm.vendors.length }} partner records</span>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Store</th>
+          <th>Owner</th>
+          <th>Status</th>
+          <th>Onboarding</th>
+          <th>Health score</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr ng-repeat="vendor in vm.vendors track by vendor.name">
+          <td>{{ vendor.name }}</td>
+          <td>{{ vendor.owner }}</td>
+          <td>{{ vendor.status }}</td>
+          <td>{{ vendor.onboarding }}</td>
+          <td>{{ vendor.score }}</td>
+          <td><button class="btn btn-ghost" type="button" ng-click="vm.approve(vendor)" ng-if="vendor.status !== 'Approved'">Approve</button></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>

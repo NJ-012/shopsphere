@@ -1,0 +1,44 @@
+<section class="hero-panel shell">
+  <div>
+    <p class="eyebrow">AngularJS commerce studio</p>
+    <h1 class="display-title">Curated fashion flows with a resilient single-page experience.</h1>
+    <p class="lead">ShopSphere combines product discovery, profile-aware checkout, vendor visibility, and admin reporting in one route-driven application.</p>
+    <div class="action-row">
+      <a class="btn btn-primary" href="#/shop">Explore catalog</a>
+      <a class="btn btn-outline" href="#/studio">Open style studio</a>
+    </div>
+  </div>
+  <aside class="stats-card">
+    <h2>Project highlights</h2>
+    <dl>
+      <div ng-repeat="item in vm.heroStats track by item.label">
+        <dt>{{ item.label }}</dt>
+        <dd>{{ item.value }}</dd>
+      </div>
+    </dl>
+  </aside>
+</section>
+
+<section class="shell section-grid">
+  <article>
+    <div class="section-header">
+      <h2>Featured products</h2>
+      <a href="#/shop">Browse all</a>
+    </div>
+    <div class="product-grid">
+      <product-card ng-repeat="product in vm.featuredProducts track by product.prod_id" product="product"></product-card>
+    </div>
+  </article>
+  <article class="info-card">
+    <div class="section-header">
+      <h2>Category mix</h2>
+      <span>{{ vm.categories.length }} live groups</span>
+    </div>
+    <ul class="category-list">
+      <li ng-repeat="category in vm.categories track by category.cat_slug">
+        <a ng-href="#/shop?category={{ category.cat_slug }}">{{ category.cat_name }}</a>
+        <span>{{ category.product_count }} items</span>
+      </li>
+    </ul>
+  </article>
+</section>

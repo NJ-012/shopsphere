@@ -1,0 +1,35 @@
+<section class="shell section-grid">
+  <article class="filter-panel">
+    <h1>Shop catalog</h1>
+    <form class="filter-form" ng-submit="vm.applyFilters()">
+      <label>
+        Search
+        <input type="search" ng-model="vm.filters.q" placeholder="Search by product or brand" />
+      </label>
+      <label>
+        Category
+        <select ng-model="vm.filters.category">
+          <option value="">All categories</option>
+          <option ng-repeat="category in vm.categories track by category.cat_slug" value="{{ category.cat_slug }}">{{ category.cat_name }}</option>
+        </select>
+      </label>
+      <label>
+        Spotlight
+        <select ng-model="vm.filters.featured">
+          <option value="">Any product</option>
+          <option value="true">Featured only</option>
+        </select>
+      </label>
+      <button class="btn btn-primary" type="submit">Apply filters</button>
+    </form>
+  </article>
+  <article>
+    <div class="section-header">
+      <h2>Results</h2>
+      <span>{{ vm.products.length }} products</span>
+    </div>
+    <div class="product-grid">
+      <product-card ng-repeat="product in vm.products track by product.prod_id" product="product"></product-card>
+    </div>
+  </article>
+</section>

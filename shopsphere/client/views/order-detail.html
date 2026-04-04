@@ -1,0 +1,26 @@
+<section class="shell" ng-if="vm.order">
+  <div class="section-header">
+    <h1>Order #{{ vm.order.order_id }}</h1>
+    <span>{{ vm.order.status }} | {{ vm.order.payment_status }}</span>
+  </div>
+  <div class="section-grid">
+    <article class="summary-card">
+      <h2>Delivery details</h2>
+      <p>{{ vm.order.address.full_name }}</p>
+      <p>{{ vm.order.address.line1 }}</p>
+      <p>{{ vm.order.address.city }}, {{ vm.order.address.state }} {{ vm.order.address.postal_code }}</p>
+      <p>{{ vm.order.address.phone }}</p>
+    </article>
+    <article>
+      <div class="list-card" ng-repeat="item in vm.order.items track by item.prod_id">
+        <img ng-src="{{ item.image_url }}" alt="{{ item.prod_name }}" />
+        <div>
+          <h3>{{ item.prod_name }}</h3>
+          <p>Quantity: {{ item.quantity }}</p>
+        </div>
+        <strong>Rs. {{ item.quantity * item.unit_price }}</strong>
+      </div>
+      <p><strong>Final amount: Rs. {{ vm.order.final_amount }}</strong></p>
+    </article>
+  </div>
+</section>

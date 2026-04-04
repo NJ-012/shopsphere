@@ -1,38 +1,35 @@
-import crypto from 'crypto';
-import { executeQuery } from '../db/db.js';
+import { mutateStore } from '../data/store.js';
 
 export const createRazorpayOrder = async (req, res) => {
   try {
     const { amount, order_id } = req.body;
 
-    const options = {
-      amount: amount * 100, // paise
-      currency: 'INR',
-      receipt: `order_${order_id}`
-    };
+    if (!amount || !order_id) {
+      return res.status(400).json({ error: 'Amount and order_id are required.' });
+    }
 
-    // Mock Razorpay response (replace with real Razorpay when keys added)
-    const rzpOrder = {
-      id: `mock_order_${Date.now()}`,
-      amount: amount * 100,
-      currency: 'INR',
-      status: 'created'
-    };
+    const razorpayOrderId = `mock_order_${Date.now()}`;
 
-    await executeQuery(
-      'UPDATE ORDERS SET razorpay_order_id = :rzp_id WHERE order_id = :order_id',
-      { rzp_id: rzpOrder.id, order_id }
-    );
+    await mutateStore(async (store) => {
+      const order = store.orders.find((item) => item.order_id === Number(order_id) && item.user_id === req.user.user_id);
+      if (!order) {
+        const error = new Error('Order not found.');
+        error.status = 404;
+        throw error;
+      }
+      order.razorpay_order_id = razorpayOrderId;
+      return store;
+    });
 
     res.json({
-      razorpay_order_id: rzpOrder.id,
-      amount: amount * 100,
+      razorpay_order_id: razorpayOrderId,
+      amount: Number(amount) * 100,
       currency: 'INR',
       key_id: process.env.RAZORPAY_KEY_ID || 'mock_key'
     });
   } catch (error) {
-    console.error('Razorpay order creation error:', error);
-    res.status(500).json({ error: 'Payment setup failed' });
+    console.error('Create payment order error:', error);
+    res.status(error.status || 500).json({ error: error.message || 'Unable to initialize payment.' });
   }
 };
 
@@ -40,21 +37,27 @@ export const verifyPayment = async (req, res) => {
   try {
     const { razorpay_payment_id, order_id } = req.body;
 
-    // Mock verification (replace with real Razorpay + crypto signature check)
-    await executeQuery(
-      `UPDATE ORDERS SET 
-         payment_status = 'PAID', 
-         status = 'CONFIRMED',
-         payment_method = 'RAZORPAY', 
-         razorpay_payment_id = :payment_id
-       WHERE order_id = :order_id`,
-      { payment_id: razorpay_payment_id, order_id }
-    );
+    if (!razorpay_payment_id || !order_id) {
+      return res.status(400).json({ error: 'Payment id and order id are required.' });
+    }
 
-    res.json({ success: true });
+    await mutateStore(async (store) => {
+      const order = store.orders.find((item) => item.order_id === Number(order_id) && item.user_id === req.user.user_id);
+      if (!order) {
+        const error = new Error('Order not found.');
+        error.status = 404;
+        throw error;
+      }
+      order.payment_status = 'PAID';
+      order.status = 'CONFIRMED';
+      order.razorpay_payment_id = razorpay_payment_id;
+      order.payment_method = 'Razorpay';
+      return store;
+    });
+
+    res.json({ success: true, message: 'Payment verified successfully.' });
   } catch (error) {
-    console.error('Payment verification error:', error);
-    res.status(500).json({ error: 'Payment processing failed' });
+    console.error('Verify payment error:', error);
+    res.status(error.status || 500).json({ error: error.message || 'Unable to verify payment.' });
   }
 };
-

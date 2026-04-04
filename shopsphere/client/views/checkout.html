@@ -1,0 +1,29 @@
+<section class="shell section-grid">
+  <article>
+    <div class="section-header">
+      <h1>Checkout</h1>
+      <span>Secure mock payment flow</span>
+    </div>
+    <form class="stack-form" ng-submit="vm.placeOrder()">
+      <label>Full name<input type="text" ng-model="vm.address.full_name" required /></label>
+      <label>Address line<input type="text" ng-model="vm.address.line1" required /></label>
+      <div class="split-row">
+        <label>City<input type="text" ng-model="vm.address.city" required /></label>
+        <label>State<input type="text" ng-model="vm.address.state" required /></label>
+      </div>
+      <div class="split-row">
+        <label>Postal code<input type="text" ng-model="vm.address.postal_code" required /></label>
+        <label>Phone<input type="text" ng-model="vm.address.phone" required /></label>
+      </div>
+      <p class="error-text" ng-if="vm.error">{{ vm.error }}</p>
+      <button class="btn btn-primary" type="submit" ng-disabled="vm.processing">{{ vm.processing ? 'Processing...' : 'Place order & pay' }}</button>
+    </form>
+  </article>
+  <aside class="summary-card">
+    <h2>Items</h2>
+    <ul class="mini-list">
+      <li ng-repeat="item in vm.items track by item.prod_id">{{ item.prod_name }} x {{ item.quantity }}</li>
+    </ul>
+    <p><strong>Total payable: Rs. {{ vm.total }}</strong></p>
+  </aside>
+</section>

@@ -1,67 +1,77 @@
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
-import { executeQuery } from '../db/db.js';
-import { sendWelcomeEmail } from '../utils/emailService.js';
 import dotenv from 'dotenv';
+import { getStore, mutateStore, nextId } from '../data/store.js';
+import { isOracleAvailable } from '../db/db.js';
+import { sendWelcomeEmail } from '../utils/emailService.js';
 
 dotenv.config();
 
+function signUserToken(user) {
+  return jwt.sign(
+    { user_id: user.user_id, role: user.role, email: user.email },
+    process.env.JWT_SECRET,
+    { expiresIn: '7d' }
+  );
+}
+
+function sanitizeUser(user) {
+  const { password_hash, ...safeUser } = user;
+  return safeUser;
+}
+
 export const register = async (req, res) => {
   try {
-    const { full_name, email, password, role, phone, shop_name } = req.body;
+    const { full_name, email, password, role = 'CUSTOMER', phone, shop_name } = req.body;
 
-    // Validation
-    if (!full_name || !email || !password || !role || !phone) {
-      return res.status(400).json({ error: 'All fields required' });
+    if (!full_name || !email || !password || !phone) {
+      return res.status(400).json({ error: 'Full name, email, password and phone are required.' });
     }
+
     if (!['CUSTOMER', 'VENDOR'].includes(role)) {
-      return res.status(400).json({ error: 'Invalid role' });
-    }
-    if (!email.includes('@')) {
-      return res.status(400).json({ error: 'Invalid email' });
+      return res.status(400).json({ error: 'Only CUSTOMER and VENDOR registrations are allowed.' });
     }
 
-    // Check existing email
-    const countResult = await executeQuery('SELECT COUNT(*) as count FROM USERS WHERE email = :email', [email]);
-    if (countResult.rows[0].count > 0) {
-      return res.status(400).json({ error: 'Email already registered' });
-    }
+    const normalizedEmail = String(email).trim().toLowerCase();
+    const passwordHash = await bcrypt.hash(password, 10);
+    let createdUser;
 
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    // Insert user with RETURNING
-    const userResult = await executeQuery(
-      `INSERT INTO USERS (full_name, email, password_hash, role, phone) 
-       VALUES (:full_name, :email, :password_hash, :role, :phone) 
-       RETURNING user_id INTO :uid`,
-      {
-        full_name, 
-        email, 
-        password_hash: hashedPassword, 
-        role, 
-        phone,
-        uid: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER }
+    await mutateStore(async (store) => {
+      const existing = store.users.find((user) => user.email.toLowerCase() === normalizedEmail);
+      if (existing) {
+        const error = new Error('Email already registered.');
+        error.status = 409;
+        throw error;
       }
-    );
 
-    const userId = userResult.outBinds.uid;
+      createdUser = {
+        user_id: nextId(store.users, 'user_id'),
+        full_name: String(full_name).trim(),
+        email: normalizedEmail,
+        password_hash: passwordHash,
+        role,
+        phone: String(phone).trim(),
+        avatar_url: '',
+        is_active: true,
+        shop_name: role === 'VENDOR' ? String(shop_name || '').trim() : '',
+        is_verified: role === 'VENDOR' ? false : undefined,
+        created_at: new Date().toISOString()
+      };
 
-    // Insert vendor if VENDOR
-    if (role === 'VENDOR' && shop_name) {
-      await executeQuery(
-        'INSERT INTO VENDORS (user_id, shop_name) VALUES (:user_id, :shop_name)',
-        { user_id: userId, shop_name }
-      );
-    }
+      store.users.push(createdUser);
+      return store;
+    });
 
-    // Send welcome email fire and forget
-    sendWelcomeEmail(email, full_name).catch(console.error);
+    sendWelcomeEmail(createdUser.email, createdUser.full_name).catch(console.error);
 
-    res.status(201).json({ message: 'Registered successfully', user_id: userId });
+    res.status(201).json({
+      message: 'Registered successfully.',
+      user: sanitizeUser(createdUser),
+      oracleConnected: isOracleAvailable()
+    });
   } catch (error) {
     console.error('Register error:', error);
-    res.status(500).json({ error: 'Server error' });
+    res.status(error.status || 500).json({ error: error.message || 'Unable to register user.' });
   }
 };
 
@@ -69,65 +79,60 @@ export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    const result = await executeQuery(
-      `SELECT user_id, full_name, email, password_hash, role, is_active, avatar_url 
-       FROM USERS WHERE email = :email`,
-      [email]
-    );
-
-    if (result.rows.length === 0) {
-      return res.status(400).json({ error: 'Invalid credentials' });
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email and password are required.' });
     }
 
-    const user = result.rows[0];
-    if (!user.is_active) {
-      return res.status(400).json({ error: 'Invalid credentials' });
+    const store = await getStore();
+    const user = store.users.find((item) => item.email.toLowerCase() === String(email).trim().toLowerCase());
+
+    if (!user || !user.is_active) {
+      return res.status(401).json({ error: 'Invalid credentials.' });
     }
 
     const isMatch = await bcrypt.compare(password, user.password_hash);
     if (!isMatch) {
-      return res.status(400).json({ error: 'Invalid credentials' });
+      return res.status(401).json({ error: 'Invalid credentials.' });
     }
 
-    const token = jwt.sign(
-      { user_id: user.user_id, role: user.role, email: user.email },
-      process.env.JWT_SECRET,
-      { expiresIn: '7d' }
-    );
+    const token = signUserToken(user);
 
     res.cookie('token', token, {
       httpOnly: true,
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-      sameSite: 'lax'
+      sameSite: 'lax',
+      secure: false,
+      maxAge: 7 * 24 * 60 * 60 * 1000
     });
 
-    const { password_hash, ...userResponse } = user;
-    res.json(userResponse);
+    res.json({
+      user: sanitizeUser(user),
+      oracleConnected: isOracleAvailable()
+    });
   } catch (error) {
     console.error('Login error:', error);
-    res.status(500).json({ error: 'Server error' });
+    res.status(500).json({ error: 'Unable to login right now.' });
   }
 };
 
-export const logout = (req, res) => {
-  res.clearCookie('token').json({ message: 'Logged out' });
+export const logout = async (_req, res) => {
+  res.clearCookie('token').json({ message: 'Logged out successfully.' });
 };
 
 export const getMe = async (req, res) => {
   try {
-    const result = await executeQuery(
-      `SELECT u.user_id, u.full_name, u.email, u.role, u.phone, u.avatar_url,
-        v.vendor_id, v.shop_name, v.is_verified
-       FROM USERS u 
-       LEFT JOIN VENDORS v ON v.user_id = u.user_id
-       WHERE u.user_id = :uid`,
-      [req.user.user_id]
-    );
+    const store = await getStore();
+    const user = store.users.find((item) => item.user_id === req.user.user_id);
 
-    res.json(result.rows[0]);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found.' });
+    }
+
+    res.json({
+      user: sanitizeUser(user),
+      oracleConnected: isOracleAvailable()
+    });
   } catch (error) {
     console.error('Get me error:', error);
-    res.status(500).json({ error: 'Server error' });
+    res.status(500).json({ error: 'Unable to fetch current user.' });
   }
 };
-

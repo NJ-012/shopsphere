@@ -1,0 +1,16 @@
+<section class="shell">
+  <div class="section-header">
+    <h1>Saved looks</h1>
+    <span>{{ vm.looks.length }} boards</span>
+  </div>
+  <div class="saved-grid">
+    <article class="summary-card" ng-repeat="look in vm.looks track by look.id">
+      <p class="eyebrow">{{ look.mood }}</p>
+      <h2>{{ look.title }}</h2>
+      <ul class="mini-list">
+        <li ng-repeat="item in look.items track by item.prod_id">{{ item.prod_name }}</li>
+      </ul>
+      <button class="btn btn-ghost" type="button" ng-click="vm.remove(look.id)">Delete</button>
+    </article>
+  </div>
+</section>

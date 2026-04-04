@@ -1,8 +1,12 @@
 import oracledb from 'oracledb';
 import dotenv from 'dotenv';
+
 dotenv.config();
 
 oracledb.outFormat = oracledb.OUT_FORMAT_OBJECT;
+
+let oracleEnabled = false;
+let initError = null;
 
 export async function initPool() {
   try {
@@ -10,43 +14,59 @@ export async function initPool() {
       user: process.env.DB_USER,
       password: process.env.DB_PASSWORD,
       connectString: process.env.DB_CONNECT_STRING,
-      poolMin: 2,
-      poolMax: 10,
-      poolIncrement: 2,
+      poolMin: 1,
+      poolMax: 5,
+      poolIncrement: 1,
+      connectTimeout: 3
     });
+    oracleEnabled = true;
+    initError = null;
     console.log('Oracle pool created');
-  } catch (err) {
-    console.error('Error creating pool:', err);
-    throw err;
+    return true;
+  } catch (error) {
+    oracleEnabled = false;
+    initError = error;
+    console.warn('Oracle unavailable, using mock datastore:', error.message);
+    return false;
   }
+}
+
+export function isOracleAvailable() {
+  return oracleEnabled;
+}
+
+export function getOracleInitError() {
+  return initError;
 }
 
 export async function getConnection() {
-  return await oracledb.getConnection();
+  if (!oracleEnabled) {
+    throw new Error('Oracle connection is not available');
+  }
+  return oracledb.getConnection();
 }
 
 export async function closePool() {
-  await oracledb.getPool().close(10);
-}
+  if (!oracleEnabled) {
+    return;
+  }
 
-export async function executeQuery(sql, binds = [], options = {}) {
-  let connection;
   try {
-    connection = await getConnection();
-    const result = await connection.execute(
-      sql,
-      binds,
-      { outFormat: oracledb.OUT_FORMAT_OBJECT, ...options }
-    );
-    return result;
+    await oracledb.getPool().close(10);
   } finally {
-    if (connection) {
-      try {
-        await connection.close();
-      } catch (err) {
-        console.error('Error closing connection:', err);
-      }
-    }
+    oracleEnabled = false;
   }
 }
 
+export async function executeQuery(sql, binds = [], options = {}) {
+  const connection = await getConnection();
+  try {
+    return await connection.execute(sql, binds, {
+      outFormat: oracledb.OUT_FORMAT_OBJECT,
+      autoCommit: true,
+      ...options
+    });
+  } finally {
+    await connection.close();
+  }
+}

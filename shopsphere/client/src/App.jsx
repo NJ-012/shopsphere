@@ -51,11 +51,10 @@ function LoginRegisterGuard({ children }) {
 
 function LocalToastContainer() {
   const { toasts, removeToast } = useToastStore();
-  
   return (
     <div className="fixed top-4 right-4 space-y-2 z-[1000]">
       {toasts.map((toast) => (
-        <motion.div
+        <div
           key={toast.id}
           initial={{ opacity: 0, x: 100 }}
           animate={{ opacity: 1, x: 0 }}
@@ -67,8 +66,8 @@ function LocalToastContainer() {
           `}
           onClick={() => removeToast(toast.id)}
         >
-          {toast.message}
-        </motion.div>
+{toast.message}
+        </div>
       ))}
     </div>
   );

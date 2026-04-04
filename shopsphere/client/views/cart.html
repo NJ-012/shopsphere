@@ -1,0 +1,32 @@
+<section class="shell section-grid">
+  <article>
+    <div class="section-header">
+      <h1>Your cart</h1>
+      <span>{{ vm.items.length }} line items</span>
+    </div>
+    <div class="list-card" ng-repeat="item in vm.items track by item.prod_id">
+      <img ng-src="{{ item.image_url }}" alt="{{ item.prod_name }}" />
+      <div>
+        <h3>{{ item.prod_name }}</h3>
+        <p>{{ item.shop_name }}</p>
+        <p>Rs. {{ item.unit_price }} each</p>
+      </div>
+      <label>
+        Qty
+        <input type="number" min="1" ng-model="item.quantity" ng-change="vm.updateQuantity(item)" />
+      </label>
+      <strong>Rs. {{ item.quantity * item.unit_price }}</strong>
+      <button class="btn btn-ghost" type="button" ng-click="vm.remove(item.prod_id)">Remove</button>
+    </div>
+    <p ng-if="!vm.items.length" class="empty-state">Your cart is empty. Start with the catalog to add products.</p>
+  </article>
+  <aside class="summary-card">
+    <h2>Order summary</h2>
+    <dl>
+      <div><dt>Subtotal</dt><dd>Rs. {{ vm.subtotal }}</dd></div>
+      <div><dt>Delivery</dt><dd>Rs. {{ vm.delivery }}</dd></div>
+      <div><dt>Total</dt><dd>Rs. {{ vm.total }}</dd></div>
+    </dl>
+    <button class="btn btn-primary full-width" type="button" ng-disabled="!vm.items.length" ng-click="vm.goToCheckout()">Continue to checkout</button>
+  </aside>
+</section>

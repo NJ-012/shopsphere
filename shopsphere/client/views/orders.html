@@ -1,0 +1,30 @@
+<section class="shell">
+  <div class="section-header">
+    <h1>Your orders</h1>
+    <span>{{ vm.orders.length }} orders tracked</span>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Order</th>
+          <th>Date</th>
+          <th>Status</th>
+          <th>Payment</th>
+          <th>Total</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr ng-repeat="order in vm.orders track by order.order_id">
+          <td><a ng-href="#/orders/{{ order.order_id }}">#{{ order.order_id }}</a></td>
+          <td>{{ order.created_at | date:'mediumDate' }}</td>
+          <td>{{ order.status }}</td>
+          <td>{{ order.payment_status }}</td>
+          <td>Rs. {{ order.final_amount }}</td>
+          <td><button class="btn btn-ghost" type="button" ng-click="vm.cancelOrder(order.order_id)" ng-if="order.status !== 'CANCELLED'">Cancel</button></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>

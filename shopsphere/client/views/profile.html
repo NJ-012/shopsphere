@@ -1,0 +1,20 @@
+<section class="shell section-grid">
+  <article>
+    <div class="section-header">
+      <h1>Profile</h1>
+      <span>{{ vm.user.role }}</span>
+    </div>
+    <form class="stack-form" ng-submit="vm.saveProfile()">
+      <label>Full name<input type="text" ng-model="vm.user.full_name" /></label>
+      <label>Email<input type="email" ng-model="vm.user.email" disabled /></label>
+      <label>Phone<input type="text" ng-model="vm.user.phone" /></label>
+      <button class="btn btn-primary" type="submit">Save profile</button>
+    </form>
+  </article>
+  <aside class="summary-card">
+    <h2>Account metrics</h2>
+    <ul class="mini-list">
+      <li ng-repeat="stat in vm.stats track by stat.label"><strong>{{ stat.label }}:</strong> {{ stat.value }}</li>
+    </ul>
+  </aside>
+</section>

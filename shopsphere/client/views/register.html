@@ -1,0 +1,22 @@
+<section class="shell auth-grid">
+  <article class="summary-card">
+    <p class="eyebrow">Create account</p>
+    <h1>Register</h1>
+    <p>Choose a customer or vendor role. Vendors get dedicated dashboard routes after login.</p>
+  </article>
+  <form class="stack-form auth-card" ng-submit="vm.submit()">
+    <label>Full name<input type="text" ng-model="vm.form.full_name" required /></label>
+    <label>Email<input type="email" ng-model="vm.form.email" required /></label>
+    <label>Password<input type="password" ng-model="vm.form.password" required /></label>
+    <label>Phone<input type="text" ng-model="vm.form.phone" required /></label>
+    <label>Role
+      <select ng-model="vm.form.role">
+        <option value="CUSTOMER">Customer</option>
+        <option value="VENDOR">Vendor</option>
+      </select>
+    </label>
+    <label ng-if="vm.form.role === 'VENDOR'">Shop name<input type="text" ng-model="vm.form.shop_name" /></label>
+    <p class="error-text" ng-if="vm.error">{{ vm.error }}</p>
+    <button class="btn btn-primary" type="submit" ng-disabled="vm.loading">{{ vm.loading ? 'Creating...' : 'Create account' }}</button>
+  </form>
+</section>

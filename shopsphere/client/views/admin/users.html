@@ -1,0 +1,31 @@
+<section class="shell">
+  <div class="section-header">
+    <h1>User oversight</h1>
+    <span>Role distribution table</span>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th rowspan="2">Role</th>
+          <th colspan="3">Account counts</th>
+          <th rowspan="2">Action</th>
+        </tr>
+        <tr>
+          <th>Active</th>
+          <th>Suspended</th>
+          <th>New today</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr ng-repeat="user in vm.users track by user.role">
+          <td>{{ user.role }}</td>
+          <td>{{ user.active }}</td>
+          <td>{{ user.suspended }}</td>
+          <td>{{ user.new_today }}</td>
+          <td><button class="btn btn-ghost" type="button" ng-click="vm.notify(user.role)">Notify</button></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>

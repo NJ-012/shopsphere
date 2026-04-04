@@ -1,0 +1,33 @@
+<section class="shell detail-grid" ng-if="vm.product">
+  <figure class="detail-media">
+    <img ng-src="{{ vm.product.image_url }}" alt="{{ vm.product.prod_name }}" />
+  </figure>
+  <article class="detail-copy">
+    <p class="eyebrow">{{ vm.product.cat_name }} | {{ vm.product.shop_name }}</p>
+    <h1>{{ vm.product.prod_name }}</h1>
+    <star-rating rating="vm.product.rating"></star-rating>
+    <p class="lead">{{ vm.product.description }}</p>
+    <div class="price-block">
+      <strong>Rs. {{ vm.product.current_price }}</strong>
+      <span ng-if="vm.product.discount_pct">MRP Rs. {{ vm.product.price }}</span>
+    </div>
+    <label class="quantity-row">
+      Quantity
+      <input type="number" min="1" ng-model="vm.quantity" />
+    </label>
+    <div class="action-row">
+      <button class="btn btn-primary" type="button" ng-click="vm.addToCart()">Add to cart</button>
+      <button class="btn btn-outline" type="button" ng-click="vm.toggleWishlist()">Save to wishlist</button>
+    </div>
+    <p class="muted">Stock available: {{ vm.product.stock_qty }} units</p>
+  </article>
+</section>
+
+<section class="shell">
+  <div class="section-header">
+    <h2>Related picks</h2>
+  </div>
+  <div class="product-grid">
+    <product-card ng-repeat="product in vm.relatedProducts track by product.prod_id" product="product"></product-card>
+  </div>
+</section>
