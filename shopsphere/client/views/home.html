@@ -1,44 +1,60 @@
-<section class="hero-panel shell">
-  <div>
-    <p class="eyebrow">AngularJS commerce studio</p>
-    <h1 class="display-title">Curated fashion flows with a resilient single-page experience.</h1>
-    <p class="lead">ShopSphere combines product discovery, profile-aware checkout, vendor visibility, and admin reporting in one route-driven application.</p>
-    <div class="action-row">
-      <a class="btn btn-primary" href="#/shop">Explore catalog</a>
-      <a class="btn btn-outline" href="#/studio">Open style studio</a>
+<section class="hero-section">
+  <div class="hero-bg-effects">
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+    <div class="blob blob-3"></div>
+  </div>
+  <div class="shell hero-inner">
+    <div class="hero-text">
+      <p class="hero-badge">✨ Welcome to ShopSphere</p>
+      <h1 class="hero-title">Discover <span class="text-grad">Premium</span> Products.</h1>
+      <p class="hero-subtitle">Curated collections with stunning quality. Experience modern shopping at its finest.</p>
+      <div class="hero-cta">
+        <a class="btn btn-primary btn-glow btn-lg" href="#/shop">🛍️ Start Shopping</a>
+        <a class="btn btn-glass btn-lg" href="#/studio">⭐ Virtual Studio</a>
+      </div>
+      <div class="hero-stats-row">
+        <div class="stat-pill" ng-repeat="item in vm.heroStats track by item.label">
+          <strong>{{ item.value }}</strong>
+          <span>{{ item.label }}</span>
+        </div>
+      </div>
+    </div>
+    <div class="hero-visual">
+      <div class="hero-showcase">
+        <div class="floating-card fc-1"></div>
+        <div class="floating-card fc-2"></div>
+        <div class="floating-card fc-3"></div>
+      </div>
     </div>
   </div>
-  <aside class="stats-card">
-    <h2>Project highlights</h2>
-    <dl>
-      <div ng-repeat="item in vm.heroStats track by item.label">
-        <dt>{{ item.label }}</dt>
-        <dd>{{ item.value }}</dd>
-      </div>
-    </dl>
-  </aside>
 </section>
 
-<section class="shell section-grid">
-  <article>
-    <div class="section-header">
-      <h2>Featured products</h2>
-      <a href="#/shop">Browse all</a>
+<section class="shell featured-section">
+  <div class="section-header">
+    <div>
+      <p class="eyebrow">Handpicked for you</p>
+      <h2>Featured Products</h2>
     </div>
-    <div class="product-grid">
-      <product-card ng-repeat="product in vm.featuredProducts track by product.prod_id" product="product"></product-card>
+    <a class="btn btn-outline" href="#/shop">Browse all →</a>
+  </div>
+  <div class="product-grid">
+    <product-card ng-repeat="product in vm.featuredProducts track by product.prod_id" product="product"></product-card>
+  </div>
+</section>
+
+<section class="shell categories-section">
+  <div class="section-header">
+    <div>
+      <p class="eyebrow">Explore</p>
+      <h2>Shop by Category</h2>
     </div>
-  </article>
-  <article class="info-card">
-    <div class="section-header">
-      <h2>Category mix</h2>
-      <span>{{ vm.categories.length }} live groups</span>
-    </div>
-    <ul class="category-list">
-      <li ng-repeat="category in vm.categories track by category.cat_slug">
-        <a ng-href="#/shop?category={{ category.cat_slug }}">{{ category.cat_name }}</a>
-        <span>{{ category.product_count }} items</span>
-      </li>
-    </ul>
-  </article>
+  </div>
+  <div class="category-grid">
+    <a class="category-card" ng-repeat="category in vm.categories track by category.cat_slug" ng-href="#/shop?category={{ category.cat_slug }}">
+      <span class="cat-icon">{{ category.cat_name.charAt(0) }}</span>
+      <h3>{{ category.cat_name }}</h3>
+      <p>{{ category.product_count }} products</p>
+    </a>
+  </div>
 </section>

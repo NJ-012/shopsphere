@@ -1,207 +1,150 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { Filter, Search } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
-import { Search, Filter, Grid, List } from 'lucide-react';
 import { motion } from 'framer-motion';
-import SkeletonCard from '../components/SkeletonCard';
+import api from '../api/axiosConfig';
 import ProductCard from '../components/ProductCard';
-import useToastStore from '../store/toastStore';
+import { gridContainerVariants } from '../components/ProductCard';
+import SkeletonCard from '../components/SkeletonCard';
 
 function ShopPage() {
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [searchInput, setSearchInput] = useState('');
   const [searchParams, setSearchParams] = useSearchParams();
-  const [viewMode, setViewMode] = useState('grid');
-  const [filters, setFilters] = useState({
-    category: '',
-    priceRange: '',
-    sort: 'newest'
-  });
-  const addToast = useToastStore((state) => state.addToast);
 
-  const searchQuery = searchParams.get('q') || '';
+  const category = searchParams.get('category') || '';
+  const query = searchParams.get('q') || '';
 
   useEffect(() => {
-    fetchProducts();
-    fetchCategories();
-  }, [searchQuery, filters]);
+    setSearchInput(query);
+  }, [query]);
 
-  const fetchProducts = async () => {
-    setLoading(true);
-    try {
-      const params = new URLSearchParams({
-        q: searchQuery,
-        category: filters.category,
-        price: filters.priceRange,
-        sort: filters.sort
-      });
-      
-      const response = await fetch(`/api/products?${params}`);
-      const data = await response.json();
-      setProducts(data.products || []);
-    } catch (error) {
-      console.error('Products fetch error:', error);
-      addToast('Failed to load products (backend required)', 'error');
-      setProducts([]);
-    } finally {
-      setLoading(false);
+  useEffect(() => {
+    async function loadShop() {
+      setLoading(true);
+      try {
+        const [productsResponse, categoriesResponse] = await Promise.all([
+          api.get('/products', { params: { category, q: query } }),
+          api.get('/products/categories'),
+        ]);
+        setProducts(productsResponse.data || []);
+        setCategories(categoriesResponse.data || []);
+      } catch (error) {
+        console.error('Shop load error:', error);
+        setProducts([]);
+      } finally {
+        setLoading(false);
+      }
     }
-  };
 
-  const fetchCategories = async () => {
-    try {
-      const response = await fetch('/api/products/categories');
-      const data = await response.json();
-      setCategories(data || []);
-    } catch (error) {
-      console.error('Categories fetch error:', error);
-      setCategories([
-        { id: 1, name: 'T-Shirts', slug: 'tshirts' },
-        { id: 2, name: 'Jeans', slug: 'jeans' },
-        { id: 3, name: 'Sneakers', slug: 'sneakers' },
-        { id: 4, name: 'Hoodies', slug: 'hoodies' }
-      ]);
-    }
-  };
+    loadShop();
+  }, [category, query]);
 
-  const updateFilter = (key, value) => {
-    setFilters(prev => ({ ...prev, [key]: value }));
-  };
-
-  const productsToShow = products.slice(0, 24); // Show max 24 for demo
+  const activeCategoryName = categories.find((item) => item.cat_slug === category)?.cat_name;
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      {/* Header */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="mb-8">
-          <motion.h1 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent mb-4"
-          >
-            Shop All Products
-          </motion.h1>
-          <p className="text-xl text-gray-600">
-            {products.length} products {searchQuery && `matching "${searchQuery}"`}
-          </p>
-        </div>
+    <div className="px-4 pb-16 pt-28 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-7xl">
+        <div className="mb-10 grid gap-8 lg:grid-cols-[280px_minmax(0,1fr)]">
+          <aside className="glass-panel h-fit rounded-[2rem] p-6">
+            <div className="flex items-center gap-2">
+              <Filter className="h-4 w-4 text-amber-600" />
+              <p className="text-sm font-bold uppercase tracking-[0.24em] text-slate-700">Discover</p>
+            </div>
 
-        {/* Controls */}
-        <div className="flex flex-col lg:flex-row gap-6 mb-8">
-          {/* Search */}
-          <div className="flex-1 relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search products..."
-              defaultValue={searchQuery}
-              onChange={(e) => setSearchParams({ q: e.target.value })}
-              className="w-full pl-12 pr-4 py-3 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-purple-500 focus:border-transparent shadow-lg"
-            />
-          </div>
-
-          {/* View Toggle */}
-          <div className="flex gap-2">
-            <button
-              onClick={() => setViewMode('grid')}
-              className={`p-3 rounded-xl transition-all ${viewMode === 'grid' ? 'bg-purple-600 text-white shadow-lg' : 'bg-white border shadow-sm hover:shadow-md'}`}
+            <form
+              className="mt-5"
+              onSubmit={(event) => {
+                event.preventDefault();
+                const next = new URLSearchParams(searchParams);
+                if (searchInput.trim()) {
+                  next.set('q', searchInput.trim());
+                } else {
+                  next.delete('q');
+                }
+                setSearchParams(next);
+              }}
             >
-              <Grid size={20} />
-            </button>
-            <button
-              onClick={() => setViewMode('list')}
-              className={`p-3 rounded-xl transition-all ${viewMode === 'list' ? 'bg-purple-600 text-white shadow-lg' : 'bg-white border shadow-sm hover:shadow-md'}`}
-            >
-              <List size={20} />
-            </button>
-          </div>
-        </div>
+              <label className="flex items-center gap-3 rounded-full bg-white px-4 py-3">
+                <Search className="h-4 w-4 text-slate-500" />
+                <input
+                  value={searchInput}
+                  onChange={(event) => setSearchInput(event.target.value)}
+                  placeholder="Search products"
+                  className="w-full bg-transparent text-sm outline-none"
+                />
+              </label>
+            </form>
 
-        {/* Filters */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-8">
-          {/* Filters Sidebar */}
-          <div className="lg:col-span-1 bg-white rounded-2xl shadow-lg p-6">
-            <h3 className="text-lg font-bold mb-6 flex items-center gap-2">
-              <Filter size={20} />
-              Filters
-            </h3>
-            
-            {/* Categories */}
-            <div className="mb-6">
-              <h4 className="font-semibold mb-3 text-gray-800">Categories</h4>
-              <div className="space-y-2">
-                {categories.map((cat) => (
+            <div className="mt-8">
+              <p className="text-xs font-bold uppercase tracking-[0.24em] text-slate-500">Categories</p>
+              <div className="mt-4 space-y-2">
+                <button
+                  type="button"
+                  onClick={() => setSearchParams(query ? { q: query } : {})}
+                  className={`w-full rounded-2xl px-4 py-3 text-left text-sm font-semibold transition ${
+                    !category ? 'bg-slate-900 text-white' : 'bg-white text-slate-700'
+                  }`}
+                >
+                  All products
+                </button>
+                {categories.map((item) => (
                   <button
-                    key={cat.id}
-                    onClick={() => updateFilter('category', cat.slug)}
-                    className={`w-full text-left p-3 rounded-xl transition-all ${filters.category === cat.slug ? 'bg-purple-600 text-white' : 'hover:bg-gray-100'}`}
+                    key={item.cat_slug}
+                    type="button"
+                    onClick={() => {
+                      const next = {};
+                      if (query) {
+                        next.q = query;
+                      }
+                      next.category = item.cat_slug;
+                      setSearchParams(next);
+                    }}
+                    className={`w-full rounded-2xl px-4 py-3 text-left text-sm font-semibold transition ${
+                      category === item.cat_slug ? 'bg-slate-900 text-white' : 'bg-white text-slate-700'
+                    }`}
                   >
-                    {cat.name}
+                    {item.cat_name}
                   </button>
                 ))}
               </div>
             </div>
+          </aside>
 
-            {/* Price Range */}
-            <div className="mb-6">
-              <h4 className="font-semibold mb-3 text-gray-800">Price Range</h4>
-              <select 
-                value={filters.priceRange}
-                onChange={(e) => updateFilter('priceRange', e.target.value)}
-                className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-              >
-                <option value="">All Prices</option>
-                <option value="0-50">$0 - $50</option>
-                <option value="50-100">$50 - $100</option>
-                <option value="100-200">$100 - $200</option>
-                <option value="200+">$200+</option>
-              </select>
+          <div>
+            <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
+              <div>
+                <p className="text-sm font-bold uppercase tracking-[0.28em] text-amber-600">Shop</p>
+                <h1 className="display-font mt-2 text-4xl font-bold text-slate-950">
+                  {activeCategoryName || 'Curated collection'}
+                </h1>
+                <p className="mt-2 text-slate-600">
+                  {products.length} result(s)
+                  {query ? ` for "${query}"` : ''}
+                </p>
+              </div>
             </div>
 
-            {/* Sort */}
-            <div>
-              <h4 className="font-semibold mb-3 text-gray-800">Sort By</h4>
-              <select 
-                value={filters.sort}
-                onChange={(e) => updateFilter('sort', e.target.value)}
-                className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-              >
-                <option value="newest">Newest First</option>
-                <option value="price-low">Price: Low to High</option>
-                <option value="price-high">Price: High to Low</option>
-                <option value="popular">Most Popular</option>
-              </select>
-            </div>
-          </div>
-
-          {/* Products Grid */}
-          <div className="lg:col-span-3">
-            <div className={`grid gap-6 ${viewMode === 'grid' ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' : 'grid-cols-1'}`}>
+            <motion.div
+              className="grid gap-6 md:grid-cols-2 xl:grid-cols-3"
+              variants={gridContainerVariants}
+              initial="hidden"
+              animate="visible"
+              key={category + query}
+            >
               {loading ? (
-                Array.from({ length: 12 }).map((_, i) => (
-                  <SkeletonCard key={i} />
-                ))
-              ) : productsToShow.length === 0 ? (
-                <div className="col-span-full text-center py-20">
-                  <div className="w-24 h-24 mx-auto mb-6 opacity-40">
-                    <Search size={64} />
-                  </div>
-                  <h3 className="text-2xl font-bold text-gray-900 mb-2">No products found</h3>
-                  <p className="text-gray-600 mb-8">Try adjusting your search or filters</p>
-                  <button 
-                    onClick={() => setSearchParams({})}
-                    className="px-8 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold rounded-2xl hover:shadow-xl"
-                  >
-                    Clear Filters
-                  </button>
-                </div>
+                Array.from({ length: 6 }).map((_, index) => <SkeletonCard key={index} />)
+              ) : products.length ? (
+                products.map((product) => <ProductCard key={product.prod_id} {...product} />)
               ) : (
-                productsToShow.map((product) => (
-                  <ProductCard key={product.prod_id || product.id} {...product} />
-                ))
+                <div className="col-span-full glass-card p-10 text-center">
+                  <p className="font-display text-2xl font-bold text-white">No products found</p>
+                  <p className="mt-2 text-gray-400">Try a different search or switch categories.</p>
+                </div>
               )}
-            </div>
+            </motion.div>
           </div>
         </div>
       </div>
@@ -210,4 +153,3 @@ function ShopPage() {
 }
 
 export default ShopPage;
-

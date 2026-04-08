@@ -1,5 +1,5 @@
-import { Suspense, lazy, useState } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { Suspense, lazy, useEffect } from 'react';
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import useAuthStore from './store/authStore';
 import useToastStore from './store/toastStore';
 import Navbar from './components/Navbar';
@@ -7,9 +7,10 @@ import Footer from './components/Footer';
 import LoadingSpinner from './components/LoadingSpinner';
 import ErrorBoundary from './components/ErrorBoundary';
 
-// Removed conflicting ToastContainer import
+import CustomCursor from './components/ui/CustomCursor';
+import PageTransition from './components/ui/PageTransition';
+import { AnimatePresence } from 'framer-motion';
 
-// Lazy load pages
 const LandingPage = lazy(() => import('./pages/LandingPage'));
 const ShopPage = lazy(() => import('./pages/ShopPage'));
 const ProductDetailPage = lazy(() => import('./pages/ProductDetailPage'));
@@ -23,100 +24,96 @@ const OrderDetailPage = lazy(() => import('./pages/OrderDetailPage'));
 const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 const VirtualStudioPage = lazy(() => import('./pages/VirtualStudioPage'));
 const SavedLooksPage = lazy(() => import('./pages/SavedLooksPage'));
-// TODO: Vendor/Admin pages - commented out
-// const VendorDashboard = lazy(() => import('./pages/vendor/VendorDashboard'));
-// ... other missing pages
 
 function ProtectedRoute({ children, roles = null }) {
-  const { user } = useAuthStore();
-  
-  if (!user) {
-    return <Navigate to="/login" replace />;
-  }
-  
-  if (roles && roles.length > 0 && !roles.includes(user.role)) {
-    return <Navigate to="/" replace />;
-  }
-  
+  const { user, isHydrated } = useAuthStore();
+
+  if (!isHydrated) return <LoadingSpinner />;
+  if (!user) return <Navigate to="/login" replace />;
+  if (roles?.length && !roles.includes(user.role)) return <Navigate to="/" replace />;
+
   return children;
 }
 
 function LoginRegisterGuard({ children }) {
-  const { user } = useAuthStore();
-  if (user) {
-    return <Navigate to="/" replace />;
-  }
-  return children;
+  const { user, isHydrated } = useAuthStore();
+  if (!isHydrated) return <LoadingSpinner />;
+  return user ? <Navigate to="/" replace /> : children;
 }
 
 function LocalToastContainer() {
   const { toasts, removeToast } = useToastStore();
+
   return (
-    <div className="fixed top-4 right-4 space-y-2 z-[1000]">
+    <div className="pointer-events-none fixed right-4 top-4 z-[1000] space-y-2">
       {toasts.map((toast) => (
-        <div
+        <button
           key={toast.id}
-          initial={{ opacity: 0, x: 100 }}
-          animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: 100 }}
-          className={`p-4 rounded-lg shadow-lg max-w-sm fade-in duration-300
-            ${toast.type === 'success' ? 'bg-green-500 text-white border-green-600' : ''}
-            ${toast.type === 'error' ? 'bg-red-500 text-white border-red-600' : ''}
-            ${toast.type === 'info' ? 'bg-blue-500 text-white border-blue-600' : ''}
-          `}
+          type="button"
           onClick={() => removeToast(toast.id)}
+          className={`pointer-events-auto block w-full max-w-sm rounded-2xl border px-4 py-3 text-left shadow-xl transition ${
+            toast.type === 'success'
+              ? 'border-emerald-300 bg-emerald-500 text-white'
+              : toast.type === 'error'
+                ? 'border-rose-300 bg-rose-500 text-white'
+                : 'border-sky-300 bg-sky-500 text-white'
+          }`}
         >
-{toast.message}
-        </div>
+          {toast.message}
+        </button>
       ))}
     </div>
+  );
+}
+
+function AppShell() {
+  const { user, fetchCurrentUser, isHydrated } = useAuthStore();
+  const location = useLocation();
+
+  useEffect(() => {
+    if (isHydrated && user) {
+      fetchCurrentUser();
+    }
+  }, [fetchCurrentUser, isHydrated, user]);
+
+  return (
+    <>
+      <CustomCursor />
+      <Navbar />
+      <ErrorBoundary>
+        <Suspense fallback={<LoadingSpinner />}>
+          <AnimatePresence mode="wait">
+            <Routes location={location} key={location.pathname}>
+              <Route path="/" element={<PageTransition><LandingPage /></PageTransition>} />
+              <Route path="/shop" element={<PageTransition><ShopPage /></PageTransition>} />
+              <Route path="/product/:id" element={<PageTransition><ProductDetailPage /></PageTransition>} />
+              <Route path="/cart" element={<ProtectedRoute><PageTransition><CartPage /></PageTransition></ProtectedRoute>} />
+              <Route path="/checkout" element={<ProtectedRoute><PageTransition><CheckoutPage /></PageTransition></ProtectedRoute>} />
+              <Route path="/orders" element={<ProtectedRoute><PageTransition><OrderHistoryPage /></PageTransition></ProtectedRoute>} />
+              <Route path="/orders/:id" element={<ProtectedRoute><PageTransition><OrderDetailPage /></PageTransition></ProtectedRoute>} />
+              <Route path="/profile" element={<ProtectedRoute><PageTransition><ProfilePage /></PageTransition></ProtectedRoute>} />
+              <Route path="/wishlist" element={<ProtectedRoute><PageTransition><WishlistPage /></PageTransition></ProtectedRoute>} />
+              <Route path="/studio" element={<ProtectedRoute><PageTransition><VirtualStudioPage /></PageTransition></ProtectedRoute>} />
+              <Route path="/my-looks" element={<ProtectedRoute><PageTransition><SavedLooksPage /></PageTransition></ProtectedRoute>} />
+              <Route path="/login" element={<LoginRegisterGuard><PageTransition><LoginPage /></PageTransition></LoginRegisterGuard>} />
+              <Route path="/register" element={<LoginRegisterGuard><PageTransition><RegisterPage /></PageTransition></LoginRegisterGuard>} />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </AnimatePresence>
+        </Suspense>
+      </ErrorBoundary>
+      <LocalToastContainer />
+      <Footer />
+    </>
   );
 }
 
 function App() {
   return (
     <BrowserRouter>
-      <Navbar />
-      <ErrorBoundary>
-        <Suspense fallback={<LoadingSpinner />}>
-          <Routes>
-          <Route path="/" element={<LandingPage />} />
-          <Route path="/shop" element={<ShopPage />} />
-          <Route path="/product/:id" element={<ProductDetailPage />} />
-          {/* Missing pages commented */}
-          {/* <Route path="/cart" element={
-            <ProtectedRoute>
-              <CartPage />
-            </ProtectedRoute>
-          } /> 
-          ... other protected routes commented until pages created */}
-          
-          {/* Vendor/Admin routes commented - pages missing 
-          <Route path="/vendor/dashboard" element={
-            <ProtectedRoute roles={['VENDOR']}>
-              <VendorDashboard />
-            </ProtectedRoute>
-          } />
-           ... admin routes commented */}
-          <Route path="/login" element={
-            <LoginRegisterGuard>
-              <LoginPage />
-            </LoginRegisterGuard>
-          } />
-          <Route path="/register" element={
-            <LoginRegisterGuard>
-              <RegisterPage />
-            </LoginRegisterGuard>
-          } />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-          </Suspense>
-        </ErrorBoundary>
-      <LocalToastContainer />
-      <Footer />
+      <AppShell />
     </BrowserRouter>
   );
 }
 
 export default App;
-

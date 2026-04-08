@@ -1,7 +1,7 @@
-import { initPool, isOracleAvailable, executeQuery, getOracleInitError } from './db.js';
+import { initPool, isDbAvailable, executeQuery, getDbInitError } from './db.js';
 
 export async function initOracle() {
   return initPool();
 }
 
-export { isOracleAvailable, executeQuery, getOracleInitError };
+export { isDbAvailable, executeQuery, getDbInitError };

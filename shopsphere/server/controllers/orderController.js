@@ -1,15 +1,50 @@
-import { getStore, mutateStore, nextId } from '../data/store.js';
+import { isDbAvailable } from '../db/db.js';
+import {
+  createOrder as mysqlCreateOrder,
+  getOrderById as mysqlGetOrderById,
+  getUserOrders as mysqlGetUserOrders,
+} from '../db/queries.js';
 import { sendOrderConfirmation } from '../utils/emailService.js';
+import { buildMockProductImage } from '../utils/mockImage.js';
 
 function calculateTotals(items) {
   const totalAmount = items.reduce((sum, item) => sum + item.quantity * item.unit_price, 0);
   const discountAmount = totalAmount >= 2500 ? Math.round(totalAmount * 0.1) : 0;
   const deliveryCharge = totalAmount - discountAmount >= 999 ? 0 : 49;
+
   return {
     totalAmount,
     discountAmount,
     deliveryCharge,
-    finalAmount: totalAmount - discountAmount + deliveryCharge
+    finalAmount: totalAmount - discountAmount + deliveryCharge,
+  };
+}
+
+function normalizeOracleOrder(order) {
+  const normalizedItems = (order.items ?? []).map((item) => ({
+    ...item,
+    image_url: item.IMAGE_URL || item.image_url || buildMockProductImage(item),
+  }));
+
+  return {
+    order_id: order.order_id ?? order.ORDER_ID,
+    user_id: order.user_id ?? order.CUSTOMER_ID,
+    total_amount: Number(order.total_amount ?? order.TOTAL_AMOUNT ?? 0),
+    discount_amount: Number(order.discount_amount ?? order.DISCOUNT_AMOUNT ?? 0),
+    delivery_charge: Number(order.delivery_charge ?? order.DELIVERY_CHARGE ?? 0),
+    final_amount: Number(order.final_amount ?? order.FINAL_AMOUNT ?? 0),
+    payment_status: order.payment_status ?? order.PAYMENT_STATUS ?? 'PENDING',
+    status: order.status ?? order.ORDER_STATUS ?? 'PENDING',
+    created_at: order.created_at ?? order.ORDERED_AT,
+    item_count: Number(order.item_count ?? order.ITEM_COUNT ?? order.items?.length ?? 0),
+    address: order.address ?? {
+      line1: order.ADDRESS_LINE1,
+      city: order.CITY,
+      state: order.STATE,
+      postal_code: order.POSTAL_CODE,
+      phone: order.CONTACT_PHONE,
+    },
+    items: normalizedItems,
   };
 }
 
@@ -21,65 +56,51 @@ export const createOrder = async (req, res) => {
       return res.status(400).json({ error: 'Address and at least one order item are required.' });
     }
 
-    let createdOrder;
-
-    await mutateStore(async (store) => {
-      const normalizedItems = items.map((item) => {
-        const product = store.products.find((entry) => entry.prod_id === Number(item.prod_id));
-        if (!product) {
-          const error = new Error('One of the selected products no longer exists.');
-          error.status = 404;
-          throw error;
-        }
-        if (product.stock_qty < Number(item.quantity)) {
-          const error = new Error(product.prod_name + ' is out of stock for the requested quantity.');
-          error.status = 400;
-          throw error;
-        }
-        return {
-          prod_id: product.prod_id,
-          quantity: Number(item.quantity),
-          unit_price: Number(item.unit_price || Math.round(product.price * (1 - (product.discount_pct || 0) / 100))),
-          prod_name: product.prod_name,
-          image_url: product.image_url
-        };
-      });
-
-      const totals = calculateTotals(normalizedItems);
-      createdOrder = {
-        order_id: nextId(store.orders, 'order_id'),
-        user_id: req.user.user_id,
-        address,
-        items: normalizedItems,
-        total_amount: totals.totalAmount,
-        discount_amount: totals.discountAmount,
-        delivery_charge: totals.deliveryCharge,
-        final_amount: totals.finalAmount,
-        payment_status: 'PENDING',
-        payment_method: 'Razorpay',
-        status: 'PENDING',
-        created_at: new Date().toISOString()
-      };
-
-      normalizedItems.forEach((item) => {
-        const product = store.products.find((entry) => entry.prod_id === item.prod_id);
-        product.stock_qty -= item.quantity;
-      });
-
-      store.orders.unshift(createdOrder);
-      return store;
-    });
-
-    const store = await getStore();
-    const user = store.users.find((item) => item.user_id === req.user.user_id);
-    if (user) {
-      sendOrderConfirmation(user.email, {
-        order_id: createdOrder.order_id,
-        items: createdOrder.items.map((item) => ({ name: item.prod_name, quantity: item.quantity, price: item.unit_price })),
-        total: createdOrder.final_amount,
-        address: [address.line1, address.city, address.state, address.postal_code].filter(Boolean).join(', ')
-      }).catch(console.error);
+    if (!isDbAvailable()) {
+       return res.status(500).json({ error: 'Database not available' });
     }
+
+    const normalizedItems = items.map((item) => ({
+      prod_id: Number(item.prod_id),
+      quantity: Number(item.quantity),
+      unit_price: Number(item.unit_price || item.price || 0),
+      prod_name: item.prod_name || '',
+      image_url: item.image_url || buildMockProductImage(item),
+      shop_name: item.shop_name || '',
+    }));
+
+    const totals = calculateTotals(normalizedItems);
+    const orderResult = await mysqlCreateOrder(req.user.user_id, normalizedItems, address, totals);
+
+    const createdOrder = {
+      order_id: orderResult.order_id,
+      user_id: req.user.user_id,
+      address,
+      items: normalizedItems,
+      total_amount: totals.totalAmount,
+      discount_amount: totals.discountAmount,
+      delivery_charge: totals.deliveryCharge,
+      final_amount: totals.finalAmount,
+      payment_status: 'PENDING',
+      status: 'PENDING',
+      created_at: new Date().toISOString(),
+    };
+
+    // Ignore email errors gracefully
+    try {
+      if (sendOrderConfirmation) {
+        await sendOrderConfirmation(req.user.email, {
+          order_id: createdOrder.order_id,
+          items: createdOrder.items.map((item) => ({
+            name: item.prod_name,
+            quantity: item.quantity,
+            price: item.unit_price,
+          })),
+          total: createdOrder.final_amount,
+          address: [address.line1, address.city, address.state, address.postal_code].filter(Boolean).join(', '),
+        });
+      }
+    } catch {}
 
     res.status(201).json(createdOrder);
   } catch (error) {
@@ -90,9 +111,12 @@ export const createOrder = async (req, res) => {
 
 export const getMyOrders = async (req, res) => {
   try {
-    const store = await getStore();
-    const orders = store.orders.filter((item) => item.user_id === req.user.user_id);
-    res.json(orders);
+    if (!isDbAvailable()) {
+       return res.status(500).json({ error: 'Database not available' });
+    }
+
+    const orders = await mysqlGetUserOrders(req.user.user_id);
+    return res.json(orders.map(normalizeOracleOrder));
   } catch (error) {
     console.error('Get orders error:', error);
     res.status(500).json({ error: 'Failed to fetch your orders.' });
@@ -102,14 +126,17 @@ export const getMyOrders = async (req, res) => {
 export const getOrderById = async (req, res) => {
   try {
     const orderId = Number(req.params.id);
-    const store = await getStore();
-    const order = store.orders.find((item) => item.order_id === orderId && item.user_id === req.user.user_id);
 
+    if (!isDbAvailable()) {
+       return res.status(500).json({ error: 'Database not available' });
+    }
+
+    const order = await mysqlGetOrderById(orderId, req.user.user_id);
     if (!order) {
       return res.status(404).json({ error: 'Order not found.' });
     }
 
-    res.json(order);
+    return res.json(normalizeOracleOrder(order));
   } catch (error) {
     console.error('Get order error:', error);
     res.status(500).json({ error: 'Failed to fetch order details.' });
@@ -117,42 +144,5 @@ export const getOrderById = async (req, res) => {
 };
 
 export const cancelOrder = async (req, res) => {
-  try {
-    const orderId = Number(req.params.id);
-    let cancelledOrder;
-
-    await mutateStore(async (store) => {
-      const order = store.orders.find((item) => item.order_id === orderId && item.user_id === req.user.user_id);
-      if (!order) {
-        const error = new Error('Order not found.');
-        error.status = 404;
-        throw error;
-      }
-      if (!['PENDING', 'CONFIRMED'].includes(order.status)) {
-        const error = new Error('This order can no longer be cancelled.');
-        error.status = 400;
-        throw error;
-      }
-
-      order.status = 'CANCELLED';
-      if (order.payment_status === 'PAID') {
-        order.payment_status = 'REFUNDED';
-      }
-
-      order.items.forEach((item) => {
-        const product = store.products.find((entry) => entry.prod_id === item.prod_id);
-        if (product) {
-          product.stock_qty += item.quantity;
-        }
-      });
-
-      cancelledOrder = order;
-      return store;
-    });
-
-    res.json(cancelledOrder);
-  } catch (error) {
-    console.error('Cancel order error:', error);
-    res.status(error.status || 500).json({ error: error.message || 'Failed to cancel order.' });
-  }
+  res.status(501).json({ error: 'Order cancellation is not implemented yet in MySQL schema.' });
 };

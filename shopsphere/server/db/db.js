@@ -1,72 +1,84 @@
-import oracledb from 'oracledb';
+import mysql from 'mysql2/promise';
 import dotenv from 'dotenv';
 
 dotenv.config();
 
-oracledb.outFormat = oracledb.OUT_FORMAT_OBJECT;
-
-let oracleEnabled = false;
+let pool = null;
 let initError = null;
 
 export async function initPool() {
   try {
-    await oracledb.createPool({
+    pool = await mysql.createPool({
+      host: process.env.DB_HOST,
       user: process.env.DB_USER,
       password: process.env.DB_PASSWORD,
-      connectString: process.env.DB_CONNECT_STRING,
-      poolMin: 1,
-      poolMax: 5,
-      poolIncrement: 1,
-      connectTimeout: 3
+      database: process.env.DB_DATABASE,
+      waitForConnections: true,
+      connectionLimit: 10,
+      queueLimit: 0,
+      namedPlaceholders: true,
     });
-    oracleEnabled = true;
+    // Test connection
+    const connection = await pool.getConnection();
+    await connection.ping();
+    connection.release();
     initError = null;
-    console.log('Oracle pool created');
+    console.log('MySQL database active');
     return true;
   } catch (error) {
-    oracleEnabled = false;
     initError = error;
-    console.warn('Oracle unavailable, using mock datastore:', error.message);
+    console.warn('MySQL unavailable:', error.message);
     return false;
   }
 }
 
-export function isOracleAvailable() {
-  return oracleEnabled;
+export function isDbAvailable() {
+  return pool !== null && initError === null;
 }
 
-export function getOracleInitError() {
+export function getDbInitError() {
   return initError;
 }
 
 export async function getConnection() {
-  if (!oracleEnabled) {
-    throw new Error('Oracle connection is not available');
+  if (!pool) {
+    throw new Error('MySQL database is not available');
   }
-  return oracledb.getConnection();
+  const connection = await pool.getConnection();
+  // Provide a compatible API for existing code
+  return {
+    beginTransaction: () => connection.beginTransaction(),
+    commit: () => connection.commit(),
+    rollback: () => connection.rollback(),
+    execute: async (sql, binds = {}) => {
+      const [rows, fields] = await connection.execute(sql, Object.values(binds));
+      // For SELECT return rows array, for INSERT/UPDATE return result info
+      if (sql.trim().toUpperCase().startsWith('SELECT')) {
+        return [rows];
+      } else {
+        // rows is ResultSetHeader for non-select
+        return [{ insertId: rows.insertId, affectedRows: rows.affectedRows }];
+      }
+    },
+    release: () => connection.release(),
+  };
 }
 
 export async function closePool() {
-  if (!oracleEnabled) {
-    return;
-  }
-
-  try {
-    await oracledb.getPool().close(10);
-  } finally {
-    oracleEnabled = false;
+  if (pool) {
+    await pool.end();
+    pool = null;
   }
 }
 
-export async function executeQuery(sql, binds = [], options = {}) {
-  const connection = await getConnection();
-  try {
-    return await connection.execute(sql, binds, {
-      outFormat: oracledb.OUT_FORMAT_OBJECT,
-      autoCommit: true,
-      ...options
-    });
-  } finally {
-    await connection.close();
+export async function executeQuery(sql, binds = {}) {
+  if (!pool) {
+    throw new Error('MySQL database not initialized');
+  }
+  const [rows] = await pool.execute(sql, Object.values(binds));
+  if (sql.trim().toUpperCase().startsWith('SELECT')) {
+    return { rows };
+  } else {
+    return { insertId: rows.insertId, affectedRows: rows.affectedRows, rows: [] };
   }
 }

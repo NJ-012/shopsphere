@@ -2,43 +2,7 @@
   "meta": {
     "lastUpdated": "2026-04-04T17:01:58.976Z"
   },
-  "users": [
-    {
-      "user_id": 1,
-      "full_name": "Niyati Joshi",
-      "email": "customer@shopsphere.com",
-      "password_hash": "$2b$10$h/4vqgcq8G8pMEFSbqz8tuN6ixEoEOYdccm9ZIgTdPBQx4AaeXfFO",
-      "role": "CUSTOMER",
-      "phone": "9876543210",
-      "avatar_url": "",
-      "is_active": true,
-      "created_at": "2026-04-04T17:01:58.976Z"
-    },
-    {
-      "user_id": 2,
-      "full_name": "Aarav Merchant",
-      "email": "vendor@shopsphere.com",
-      "password_hash": "$2b$10$h/4vqgcq8G8pMEFSbqz8tuN6ixEoEOYdccm9ZIgTdPBQx4AaeXfFO",
-      "role": "VENDOR",
-      "phone": "9988776655",
-      "avatar_url": "",
-      "is_active": true,
-      "shop_name": "Urban Denim",
-      "is_verified": true,
-      "created_at": "2026-04-04T17:01:58.976Z"
-    },
-    {
-      "user_id": 3,
-      "full_name": "Admin User",
-      "email": "admin@shopsphere.com",
-      "password_hash": "$2b$10$h/4vqgcq8G8pMEFSbqz8tuN6ixEoEOYdccm9ZIgTdPBQx4AaeXfFO",
-      "role": "ADMIN",
-      "phone": "9000000000",
-      "avatar_url": "",
-      "is_active": true,
-      "created_at": "2026-04-04T17:01:58.976Z"
-    }
-  ],
+  "users": [],
   "products": [
     {
       "prod_id": 1,

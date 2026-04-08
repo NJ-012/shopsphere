@@ -25,6 +25,29 @@ export const protect = async (req, res, next) => {
   }
 };
 
+export const optionalProtect = async (req, _res, next) => {
+  try {
+    const token = req.cookies.token;
+
+    if (!token) {
+      req.user = null;
+      return next();
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    req.user = {
+      user_id: decoded.user_id,
+      role: decoded.role,
+      email: decoded.email
+    };
+
+    next();
+  } catch (_error) {
+    req.user = null;
+    next();
+  }
+};
+
 export const checkRole = (...roles) => {
   return (req, res, next) => {
     if (!req.user || !roles.includes(req.user.role)) {

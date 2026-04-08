@@ -1,299 +1,145 @@
-import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { Heart, ShoppingCart, Star, Share2, ArrowLeft } from 'lucide-react';
-import { motion } from 'framer-motion';
-import useToastStore from '../store/toastStore';
+import { useEffect, useMemo, useState } from 'react';
+import { ArrowLeft, Heart, ShoppingCart, Sparkles } from 'lucide-react';
+import { useNavigate, useParams } from 'react-router-dom';
+import api from '../api/axiosConfig';
 import useCartStore from '../store/cartStore';
+import useToastStore from '../store/toastStore';
+import { getProductImageUrl, handleProductImageError } from '../utils/productImage';
 
 function ProductDetailPage() {
   const { id } = useParams();
-  const navigate = useNavigate();
-  const addToast = useToastStore((state) => state.addToast);
-  const addToCart = useCartStore((state) => state.addToCart);
-  
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [selectedVariant, setSelectedVariant] = useState(0);
   const [quantity, setQuantity] = useState(1);
-  const [images, setImages] = useState([]);
+  const navigate = useNavigate();
+  const addItem = useCartStore((state) => state.addItem);
+  const toast = useToastStore();
+  const productImage = getProductImageUrl(product?.image_url);
 
   useEffect(() => {
-    // Mock product data for demo (backend not running)
-    setTimeout(() => {
-      setProduct({
-        prod_id: id,
-        name: `Premium Product #${id}`,
-        description: 'High quality product with modern design and excellent craftsmanship.',
-        price: 89.99,
-        original_price: 129.99,
-        rating: 4.8,
-        reviews_count: 127,
-        images: [
-          `/api/products/${id}/image1.jpg`,
-          `/api/products/${id}/image2.jpg`,
-          `/api/products/${id}/image3.jpg`
-        ],
-        variants: [
-          { name: 'Small', in_stock: true },
-          { name: 'Medium', in_stock: true },
-          { name: 'Large', in_stock: false },
-          { name: 'XL', in_stock: true }
-        ],
-        category: 'Featured',
-        seller: 'Premium Brand'
-      });
-      setImages([
-        'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&q=85',
-        'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=800&q=85',
-        'https://images.unsplash.com/photo-1556909114-f6e7ad7d3133?w=800&q=85'
-      ]);
-      setLoading(false);
-    }, 800);
+    async function loadProduct() {
+      setLoading(true);
+      try {
+        const { data } = await api.get(`/products/${id}`);
+        setProduct(data);
+      } catch (error) {
+        console.error('Product detail error:', error);
+        setProduct(null);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadProduct();
   }, [id]);
 
-  const handleAddToCart = () => {
-    if (product && product.variants[selectedVariant].in_stock) {
-      addToCart({
-        ...product,
-        variant: product.variants[selectedVariant].name,
-        quantity,
-        image: images[0]
-      });
-      addToast('Added to cart!', 'success');
-    } else {
-      addToast('This variant is out of stock', 'error');
+  const finalPrice = useMemo(() => {
+    if (!product) {
+      return 0;
     }
-  };
+    return product.current_price || Math.round(product.price * (1 - (product.discount_pct || 0) / 100));
+  }, [product]);
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 py-12">
-        <div className="max-w-6xl mx-auto px-4">
-          <div className="animate-pulse">
-            <div className="h-96 bg-gray-200 rounded-2xl mb-8"></div>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-              <div className="space-y-4">
-                <div className="h-10 bg-gray-200 rounded-xl w-3/4"></div>
-                <div className="h-6 bg-gray-200 rounded w-1/2"></div>
-                <div className="h-8 bg-gray-200 rounded-lg w-full"></div>
-              </div>
-              <div className="space-y-4">
-                <div className="h-12 bg-gray-200 rounded-xl w-1/3"></div>
-                <div className="grid grid-cols-4 gap-2">
-                  <div className="h-20 bg-gray-200 rounded-lg"></div>
-                  <div className="h-20 bg-gray-200 rounded-lg"></div>
-                  <div className="h-20 bg-gray-200 rounded-lg"></div>
-                  <div className="h-20 bg-gray-200 rounded-lg"></div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
+    return <div className="px-4 pb-16 pt-28 sm:px-6 lg:px-8">Loading product...</div>;
   }
 
   if (!product) {
     return (
-      <div className="min-h-screen bg-gray-50 py-12 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-24 h-24 mx-auto mb-6 opacity-40">
-            <Search size={64} />
-          </div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Product not found</h2>
-          <button 
-            onClick={() => navigate('/shop')}
-            className="px-6 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl hover:shadow-lg"
-          >
-            Continue Shopping
-          </button>
-        </div>
+      <div className="px-4 pb-16 pt-28 text-center sm:px-6 lg:px-8">
+        <p className="display-font text-3xl font-bold text-slate-900">Product not found</p>
+        <button type="button" onClick={() => navigate('/shop')} className="mt-6 rounded-full bg-slate-900 px-6 py-3 text-sm font-bold text-white">
+          Continue shopping
+        </button>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Back Button */}
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-12">
-        <motion.button
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          onClick={() => navigate('/shop')}
-          className="flex items-center gap-2 mb-8 text-gray-600 hover:text-gray-900 font-medium"
-        >
-          <ArrowLeft size={20} />
-          Back to Shop
-        </motion.button>
+    <div className="px-4 pb-16 pt-28 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-7xl">
+        <button type="button" onClick={() => navigate(-1)} className="mb-6 inline-flex items-center gap-2 text-sm font-semibold text-slate-600">
+          <ArrowLeft className="h-4 w-4" />
+          Back
+        </button>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 items-start">
-          {/* Images */}
-          <motion.div 
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            className="space-y-6"
-          >
-            <div className="aspect-square bg-white rounded-3xl shadow-2xl overflow-hidden">
-              <img 
-                src={images[0]} 
-                alt={product.name}
-                className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
-              />
-            </div>
-            
-            {/* Thumbnails */}
-            <div className="grid grid-cols-4 gap-3">
-              {images.map((img, index) => (
-                <motion.button
-                  key={index}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => setImages(prev => {
-                    const newImages = [...prev];
-                    [newImages[0], newImages[index]] = [newImages[index], newImages[0]];
-                    return newImages;
-                  })}
-                  className={`aspect-square rounded-2xl overflow-hidden border-4 transition-all ${
-                    index === 0 
-                      ? 'border-purple-500 shadow-lg scale-105' 
-                      : 'border-transparent hover:border-gray-200 hover:shadow-md'
-                  }`}
-                >
-                  <img src={img} alt={`${product.name} ${index + 1}`} className="w-full h-full object-cover" />
-                </motion.button>
-              ))}
-            </div>
-          </motion.div>
+        <div className="grid gap-8 lg:grid-cols-[1fr_0.9fr]">
+          <div className="overflow-hidden rounded-[2.5rem] bg-white p-4 shadow-[0_20px_60px_rgba(20,33,61,0.08)]">
+            <img
+              src={productImage}
+              alt={product.prod_name}
+              onError={handleProductImageError}
+              className="aspect-[4/5] w-full rounded-[2rem] object-cover"
+            />
+          </div>
 
-          {/* Product Info */}
-          <motion.div 
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            className="space-y-6"
-          >
-            <div>
-              <h1 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-2">
-                {product.name}
-              </h1>
-              <div className="flex items-center gap-2 mb-4">
-                <div className="flex items-center gap-1">
-                  {Array.from({ length: 5 }).map((_, i) => (
-                    <Star 
-                      key={i} 
-                      size={20}
-                      className={`${
-                        i < Math.floor(product.rating) 
-                          ? 'text-yellow-400 fill-yellow-400' 
-                          : 'text-gray-300'
-                      }`}
-                    />
-                  ))}
-                </div>
-                <span className="text-sm text-gray-500">({product.reviews_count} reviews)</span>
-              </div>
+          <div className="glass-panel rounded-[2.5rem] p-8">
+            <p className="text-xs font-bold uppercase tracking-[0.24em] text-amber-600">{product.cat_name}</p>
+            <h1 className="display-font mt-3 text-4xl font-bold text-slate-950">{product.prod_name}</h1>
+            <p className="mt-2 text-sm text-slate-500">Sold by {product.shop_name}</p>
+            <p className="mt-6 text-base leading-7 text-slate-600">{product.description}</p>
+
+            <div className="mt-8 flex items-end gap-3">
+              <p className="text-4xl font-extrabold text-slate-950">Rs. {finalPrice.toLocaleString()}</p>
+              {product.discount_pct > 0 && <p className="pb-1 text-lg text-slate-400 line-through">Rs. {product.price.toLocaleString()}</p>}
             </div>
 
-            <div className="space-y-2">
-              <div className="flex items-center gap-4">
-                <span className="text-3xl font-bold text-gray-900">${product.price}</span>
-                <span className="text-xl text-gray-500 line-through">${product.original_price}</span>
-                <span className="bg-green-500 text-white text-sm px-3 py-1 rounded-full font-semibold">
-                  31% OFF
+            <div className="mt-6 flex flex-wrap gap-3">
+              {product.try_on_enabled && (
+                <span className="inline-flex items-center gap-2 rounded-full bg-amber-100 px-4 py-2 text-xs font-bold uppercase tracking-[0.16em] text-amber-700">
+                  <Sparkles className="h-4 w-4" />
+                  Virtual try-on ready
                 </span>
-              </div>
-              <span className="inline-block bg-gray-100 text-gray-800 text-sm px-3 py-1 rounded-full">
-                In stock ({product.variants.filter(v => v.in_stock).length} variants)
+              )}
+              <span className="rounded-full bg-white px-4 py-2 text-xs font-bold uppercase tracking-[0.16em] text-slate-700">
+                {product.stock_qty > 0 ? `${product.stock_qty} in stock` : 'Currently unavailable'}
               </span>
             </div>
 
-            <div>
-              <h3 className="font-semibold text-lg mb-4">Select Size</h3>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                {product.variants.map((variant, index) => (
-                  <motion.button
-                    key={variant.name}
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => setSelectedVariant(index)}
-                    disabled={!variant.in_stock}
-                    className={`p-4 rounded-2xl border-2 font-medium transition-all ${
-                      selectedVariant === index
-                        ? 'border-purple-500 bg-purple-50 text-purple-600 shadow-md'
-                        : variant.in_stock
-                          ? 'border-gray-200 hover:border-gray-400 hover:shadow-md'
-                          : 'border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed'
-                    }`}
-                  >
-                    {variant.name}
-                    {!variant.in_stock && <span className="text-xs block mt-1">Out of stock</span>}
-                  </motion.button>
-                ))}
+            <div className="mt-8 flex items-center gap-4">
+              <div className="flex items-center rounded-full bg-white px-2 py-2 shadow-sm">
+                <button type="button" onClick={() => setQuantity((current) => Math.max(1, current - 1))} className="h-10 w-10 rounded-full text-lg">
+                  -
+                </button>
+                <span className="w-12 text-center font-bold text-slate-900">{quantity}</span>
+                <button type="button" onClick={() => setQuantity((current) => Math.min(product.stock_qty || 1, current + 1))} className="h-10 w-10 rounded-full text-lg">
+                  +
+                </button>
               </div>
             </div>
 
-            <div className="flex items-center gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Quantity</label>
-                <div className="flex items-center space-x-2">
-                  <button 
-                    onClick={() => setQuantity(prev => Math.max(1, prev - 1))}
-                    className="w-12 h-12 bg-gray-200 hover:bg-gray-300 rounded-xl flex items-center justify-center font-bold transition-colors"
-                  >
-                    -
-                  </button>
-                  <span className="w-12 text-center text-lg font-bold">{quantity}</span>
-                  <button 
-                    onClick={() => setQuantity(prev => Math.min(10, prev + 1))}
-                    className="w-12 h-12 bg-gray-200 hover:bg-gray-300 rounded-xl flex items-center justify-center font-bold transition-colors"
-                  >
-                    +
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={handleAddToCart}
-                disabled={!product.variants[selectedVariant].in_stock}
-                className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white py-4 px-8 rounded-3xl font-bold text-lg shadow-xl hover:shadow-2xl hover:from-purple-700 hover:to-pink-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+              <button
+                type="button"
+                disabled={product.stock_qty <= 0}
+                onClick={() => {
+                  for (let count = 0; count < quantity; count += 1) {
+                    addItem({
+                        prod_id: product.prod_id,
+                        prod_name: product.prod_name,
+                        price: finalPrice,
+                        image_url: productImage,
+                        stock_qty: product.stock_qty,
+                        vendor_name: product.shop_name,
+                      });
+                  }
+                  toast.success('Added to cart');
+                }}
+                className="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-slate-900 px-6 py-4 text-sm font-bold text-white transition hover:bg-slate-800 disabled:opacity-50"
               >
-                <ShoppingCart size={24} className="inline mr-2" />
-                Add to Cart
-              </motion.button>
-              
-              <div className="flex gap-4 pt-2">
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  className="flex-1 bg-white border-2 border-gray-200 hover:border-gray-300 rounded-2xl py-3 px-6 text-gray-700 font-medium shadow-sm hover:shadow-md transition-all"
-                >
-                  <Heart size={20} className="inline mr-2" />
-                  Add to Wishlist
-                </motion.button>
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  className="flex-1 bg-white border-2 border-gray-200 hover:border-gray-300 rounded-2xl py-3 px-6 text-gray-700 font-medium shadow-sm hover:shadow-md transition-all"
-                >
-                  <Share2 size={20} className="inline mr-2" />
-                  Share
-                </motion.button>
-              </div>
+                <ShoppingCart className="h-4 w-4" />
+                Add to cart
+              </button>
+              <button
+                type="button"
+                onClick={() => toast.success('Wishlist support is ready for your next iteration')}
+                className="inline-flex items-center justify-center gap-2 rounded-full border border-slate-300 px-6 py-4 text-sm font-bold text-slate-900"
+              >
+                <Heart className="h-4 w-4" />
+                Save
+              </button>
             </div>
-
-            <div className="p-6 bg-white rounded-3xl shadow-lg">
-              <h3 className="text-lg font-bold mb-4">About this product</h3>
-              <p className="text-gray-700 leading-relaxed">
-                {product.description}
-              </p>
-            </div>
-
-            <div className="text-sm text-gray-500 space-y-1">
-              <p><span className="font-semibold">Category:</span> {product.category}</p>
-              <p><span className="font-semibold">Seller:</span> {product.seller}</p>
-            </div>
-          </motion.div>
+          </div>
         </div>
       </div>
     </div>
@@ -301,4 +147,3 @@ function ProductDetailPage() {
 }
 
 export default ProductDetailPage;
-

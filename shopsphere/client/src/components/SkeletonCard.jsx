@@ -1,30 +1,36 @@
+import { motion } from 'framer-motion';
+
+/* ── Shimmer skeleton card matching dark glass theme ── */
 function SkeletonCard() {
   return (
-    <div className="group animate-pulse bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-all border border-gray-100">
-      {/* Image */}
-      <div className="aspect-square bg-gradient-to-br from-gray-200 to-gray-300 rounded-t-2xl"></div>
-      
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] backdrop-blur-xl"
+    >
+      {/* Shimmer overlay */}
+      <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.5s_infinite] bg-gradient-to-r from-transparent via-white/5 to-transparent" />
+
+      {/* Image placeholder */}
+      <div className="aspect-[4/5] rounded-t-2xl bg-gradient-to-br from-white/5 to-white/[0.02]" />
+
       {/* Content */}
       <div className="p-4 space-y-3">
-        {/* Name */}
-        <div className="h-4 bg-gray-200 rounded w-4/5"></div>
-        <div className="h-3 bg-gray-200 rounded w-3/5"></div>
-        
-        {/* Vendor */}
-        <div className="h-3 bg-gray-200 rounded w-2/5"></div>
-        
+        <div className="h-3 w-3/5 rounded-full bg-white/10" />
+        <div className="h-5 w-4/5 rounded-full bg-white/10" />
+        <div className="h-3 w-2/5 rounded-full bg-white/10" />
+
         {/* Price */}
-        <div className="flex items-center space-x-2">
-          <div className="h-5 bg-gray-200 rounded w-16"></div>
-          <div className="h-4 bg-gray-200 rounded w-12"></div>
+        <div className="flex items-center space-x-2 pt-2">
+          <div className="h-6 w-20 rounded-full bg-white/10" />
+          <div className="h-4 w-14 rounded-full bg-white/5" />
         </div>
-        
-        {/* Button */}
-        <div className="h-10 bg-gray-200 rounded-xl w-full"></div>
+
+        {/* Button placeholder */}
+        <div className="h-11 w-full rounded-xl bg-white/5" />
       </div>
-    </div>
+    </motion.div>
   );
 }
 
 export default SkeletonCard;
-

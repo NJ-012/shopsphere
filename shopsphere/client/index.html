@@ -55,7 +55,7 @@
       <div class="shell footer-grid">
         <section>
           <h2>ShopSphere</h2>
-          <p>AngularJS SPA, semantic layouts, resilient event handling, and a Node + Oracle-ready backend.</p>
+          <p>Modern commerce platform with premium products, seamless checkout, and a beautiful shopping experience.</p>
         </section>
         <nav aria-label="Footer links">
           <a href="#/shop">Shop</a>
@@ -64,8 +64,8 @@
           <a href="#/admin/dashboard">Admin Center</a>
         </nav>
         <section>
-          <p><strong>Data mode:</strong> {{ app.systemStatus.mode || 'checking' }}</p>
-          <p><strong>Oracle:</strong> {{ app.systemStatus.oracleConnected ? 'Connected' : 'Fallback mock store' }}</p>
+          <p><strong>Powered by:</strong> ShopSphere Engine</p>
+          <p><strong>Status:</strong> {{ app.systemStatus.dbConnected ? 'Online' : 'Connecting...' }}</p>
         </section>
       </div>
     </footer>

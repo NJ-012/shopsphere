@@ -1,73 +1,101 @@
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
-import { getStore, mutateStore, nextId } from '../data/store.js';
-import { isOracleAvailable } from '../db/db.js';
+import { isDbAvailable } from '../db/db.js';
+import { createUser, createVendor, getUserByEmail, getUserById } from '../db/queries.js';
 import { sendWelcomeEmail } from '../utils/emailService.js';
 
 dotenv.config();
 
+function normalizeUser(user) {
+  if (!user) {
+    return null;
+  }
+
+  return {
+    user_id: user.USER_ID,
+    full_name: user.FULL_NAME,
+    email: user.EMAIL,
+    role: user.ROLE,
+    phone: user.PHONE || '',
+    shop_name: user.SHOP_NAME || '',
+    is_verified: user.IS_VERIFIED ? true : false,
+    created_at: user.CREATED_AT,
+    is_active: true,
+  };
+}
+
+function sanitizeUser(user, password_hash) {
+  const normalized = normalizeUser(user);
+  if (!normalized) return null;
+  return normalized;
+}
+
 function signUserToken(user) {
   return jwt.sign(
-    { user_id: user.user_id, role: user.role, email: user.email },
-    process.env.JWT_SECRET,
+    {
+      user_id: user.USER_ID,
+      role: user.ROLE,
+      email: user.EMAIL,
+    },
+    process.env.JWT_SECRET || 'secret123',
     { expiresIn: '7d' }
   );
 }
 
-function sanitizeUser(user) {
-  const { password_hash, ...safeUser } = user;
-  return safeUser;
-}
-
 export const register = async (req, res) => {
   try {
-    const { full_name, email, password, role = 'CUSTOMER', phone, shop_name } = req.body;
+    const {
+      full_name,
+      email,
+      password,
+      role = 'CUSTOMER',
+      phone,
+      shop_name,
+    } = req.body;
 
     if (!full_name || !email || !password || !phone) {
       return res.status(400).json({ error: 'Full name, email, password and phone are required.' });
     }
 
-    if (!['CUSTOMER', 'VENDOR'].includes(role)) {
-      return res.status(400).json({ error: 'Only CUSTOMER and VENDOR registrations are allowed.' });
+    if (!['CUSTOMER', 'VENDOR', 'ADMIN'].includes(role)) {
+      return res.status(400).json({ error: 'Only CUSTOMER/VENDOR registrations are allowed.' });
+    }
+
+    if (role === 'VENDOR' && !shop_name) {
+      return res.status(400).json({ error: 'Shop name is required for vendor registration.' });
     }
 
     const normalizedEmail = String(email).trim().toLowerCase();
+    const existingUser = await getUserByEmail(normalizedEmail);
+    if (existingUser) {
+      return res.status(409).json({ error: 'Email already registered.' });
+    }
+
     const passwordHash = await bcrypt.hash(password, 10);
-    let createdUser;
+    const userId = await createUser(
+      String(full_name).trim(),
+      normalizedEmail,
+      passwordHash,
+      role,
+      String(phone).trim()
+    );
 
-    await mutateStore(async (store) => {
-      const existing = store.users.find((user) => user.email.toLowerCase() === normalizedEmail);
-      if (existing) {
-        const error = new Error('Email already registered.');
-        error.status = 409;
-        throw error;
-      }
+    if (role === 'VENDOR') {
+      await createVendor(userId, String(shop_name).trim(), 0);
+    }
 
-      createdUser = {
-        user_id: nextId(store.users, 'user_id'),
-        full_name: String(full_name).trim(),
-        email: normalizedEmail,
-        password_hash: passwordHash,
-        role,
-        phone: String(phone).trim(),
-        avatar_url: '',
-        is_active: true,
-        shop_name: role === 'VENDOR' ? String(shop_name || '').trim() : '',
-        is_verified: role === 'VENDOR' ? false : undefined,
-        created_at: new Date().toISOString()
-      };
+    const createdUser = await getUserById(userId);
 
-      store.users.push(createdUser);
-      return store;
-    });
-
-    sendWelcomeEmail(createdUser.email, createdUser.full_name).catch(console.error);
+    // Suppress email errors if email service isn't setup
+    try {
+      if (sendWelcomeEmail) await sendWelcomeEmail(normalizedEmail, String(full_name).trim());
+    } catch {}
 
     res.status(201).json({
       message: 'Registered successfully.',
-      user: sanitizeUser(createdUser),
-      oracleConnected: isOracleAvailable()
+      user: sanitizeUser(createdUser, passwordHash),
+      dbConnected: isDbAvailable(),
     });
   } catch (error) {
     console.error('Register error:', error);
@@ -83,14 +111,14 @@ export const login = async (req, res) => {
       return res.status(400).json({ error: 'Email and password are required.' });
     }
 
-    const store = await getStore();
-    const user = store.users.find((item) => item.email.toLowerCase() === String(email).trim().toLowerCase());
+    const normalizedEmail = String(email).trim().toLowerCase();
+    const user = await getUserByEmail(normalizedEmail);
 
-    if (!user || !user.is_active) {
+    if (!user || !user.PASSWORD_HASH) {
       return res.status(401).json({ error: 'Invalid credentials.' });
     }
 
-    const isMatch = await bcrypt.compare(password, user.password_hash);
+    const isMatch = await bcrypt.compare(password, user.PASSWORD_HASH);
     if (!isMatch) {
       return res.status(401).json({ error: 'Invalid credentials.' });
     }
@@ -101,12 +129,13 @@ export const login = async (req, res) => {
       httpOnly: true,
       sameSite: 'lax',
       secure: false,
-      maxAge: 7 * 24 * 60 * 60 * 1000
+      maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
     res.json({
       user: sanitizeUser(user),
-      oracleConnected: isOracleAvailable()
+      token,
+      dbConnected: isDbAvailable(),
     });
   } catch (error) {
     console.error('Login error:', error);
@@ -120,16 +149,26 @@ export const logout = async (_req, res) => {
 
 export const getMe = async (req, res) => {
   try {
-    const store = await getStore();
-    const user = store.users.find((item) => item.user_id === req.user.user_id);
+    if (!req.user?.user_id) {
+      return res.json({
+        user: null,
+        dbConnected: isDbAvailable(),
+      });
+    }
+
+    const user = await getUserById(req.user.user_id);
 
     if (!user) {
-      return res.status(404).json({ error: 'User not found.' });
+      res.clearCookie('token');
+      return res.json({
+        user: null,
+        dbConnected: isDbAvailable(),
+      });
     }
 
     res.json({
       user: sanitizeUser(user),
-      oracleConnected: isOracleAvailable()
+      dbConnected: isDbAvailable(),
     });
   } catch (error) {
     console.error('Get me error:', error);

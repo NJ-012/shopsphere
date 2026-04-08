@@ -2,7 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
-import { initPool, isOracleAvailable, getOracleInitError } from './db/db.js';
+import { initPool, isDbAvailable, getDbInitError } from './db/db.js';
 import authRoutes from './routes/authRoutes.js';
 import orderRoutes from './routes/orderRoutes.js';
 import paymentRoutes from './routes/paymentRoutes.js';
@@ -23,9 +23,9 @@ app.use(cookieParser());
 app.get('/api/status', (_req, res) => {
   res.json({
     ok: true,
-    oracleConnected: isOracleAvailable(),
-    mode: isOracleAvailable() ? 'oracle' : 'mock',
-    oracleError: getOracleInitError() ? getOracleInitError().message : null,
+    dbConnected: isDbAvailable(),
+    mode: isDbAvailable() ? 'mysql' : 'unavailable',
+    dbError: getDbInitError() ? getDbInitError().message : null,
     clientOrigin
   });
 });
@@ -52,7 +52,7 @@ async function start() {
     const port = Number(process.env.PORT) || 5000;
     app.listen(port, () => {
       console.log(`Server running on http://localhost:${port}`);
-      console.log(`API mode: ${isOracleAvailable() ? 'oracle' : 'mock fallback'}`);
+      console.log(`Mode: MySQL database`);
     });
   } catch (error) {
     console.error('Failed to start server:', error);

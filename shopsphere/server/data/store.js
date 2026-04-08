@@ -1,7 +1,6 @@
 import { promises as fs } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import bcrypt from 'bcrypt';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -139,48 +138,12 @@ const sampleProducts = [
 ];
 
 async function buildInitialStore() {
-  const passwordHash = await bcrypt.hash('password123', 10);
   return {
     meta: {
       lastUpdated: new Date().toISOString()
     },
-    users: [
-      {
-        user_id: 1,
-        full_name: 'Niyati Joshi',
-        email: 'customer@shopsphere.com',
-        password_hash: passwordHash,
-        role: 'CUSTOMER',
-        phone: '9876543210',
-        avatar_url: '',
-        is_active: true,
-        created_at: new Date().toISOString()
-      },
-      {
-        user_id: 2,
-        full_name: 'Aarav Merchant',
-        email: 'vendor@shopsphere.com',
-        password_hash: passwordHash,
-        role: 'VENDOR',
-        phone: '9988776655',
-        avatar_url: '',
-        is_active: true,
-        shop_name: 'Urban Denim',
-        is_verified: true,
-        created_at: new Date().toISOString()
-      },
-      {
-        user_id: 3,
-        full_name: 'Admin User',
-        email: 'admin@shopsphere.com',
-        password_hash: passwordHash,
-        role: 'ADMIN',
-        phone: '9000000000',
-        avatar_url: '',
-        is_active: true,
-        created_at: new Date().toISOString()
-      }
-    ],
+    // The mock store is only used for non-auth fallback data such as payment state.
+    users: [],
     products: sampleProducts,
     orders: [
       {
