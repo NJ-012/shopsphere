@@ -147,14 +147,15 @@ async function seed() {
     };
 
     const products = [];
+    let globalIndex = 0;
     for (const [cat, templates] of Object.entries(productTemplates)) {
-      for (let i = 0; i < 20; i++) {
+      for (let i = 0; i < 8; i++) {
         const tmpl = templates[i % templates.length];
         const price = Math.floor(Math.random() * (tmpl.priceRange[1] - tmpl.priceRange[0] + 1)) + tmpl.priceRange[0];
         const discount = Math.random() < 0.25 ? Math.floor(Math.random() * 30) + 5 : 0;
         const featured = Math.random() < 0.15;
         const desc = `Premium ${tmpl.name.toLowerCase()} with high quality materials and excellent performance.`;
-        const image = `https://source.unsplash.com/seed/${cat}-${i}/${800}x${800}?${encodeURIComponent(tmpl.keywords)}`;
+        const image = `https://picsum.photos/seed/product${globalIndex}/800/800`;
         products.push({
           cat,
           name: `${tmpl.name} ${i + 1}`,
@@ -164,6 +165,7 @@ async function seed() {
           discount,
           desc,
         });
+        globalIndex++;
       }
     }
 

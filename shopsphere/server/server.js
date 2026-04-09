@@ -52,7 +52,7 @@ async function start() {
     const port = Number(process.env.PORT) || 5000;
     app.listen(port, () => {
       console.log(`Server running on http://localhost:${port}`);
-      console.log(`Mode: MySQL database`);
+      console.log(`Mode: SQLite database`);
     });
   } catch (error) {
     console.error('Failed to start server:', error);

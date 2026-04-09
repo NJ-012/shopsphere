@@ -1,39 +1,34 @@
-import mysql from 'mysql2/promise';
-import dotenv from 'dotenv';
+import sqlite3 from 'sqlite3';
+import { open } from 'sqlite';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-dotenv.config();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
-let pool = null;
+let db = null;
 let initError = null;
 
 export async function initPool() {
   try {
-    pool = await mysql.createPool({
-      host: process.env.DB_HOST,
-      user: process.env.DB_USER,
-      password: process.env.DB_PASSWORD,
-      database: process.env.DB_DATABASE,
-      waitForConnections: true,
-      connectionLimit: 10,
-      queueLimit: 0,
-      namedPlaceholders: true,
+    db = await open({
+      filename: path.resolve(__dirname, 'shopsphere.sqlite'),
+      driver: sqlite3.Database
     });
     // Test connection
-    const connection = await pool.getConnection();
-    await connection.ping();
-    connection.release();
+    await db.get('SELECT 1');
     initError = null;
-    console.log('MySQL database active');
+    console.log('SQLite database active');
     return true;
   } catch (error) {
     initError = error;
-    console.warn('MySQL unavailable:', error.message);
+    console.warn('SQLite unavailable:', error.message);
     return false;
   }
 }
 
 export function isDbAvailable() {
-  return pool !== null && initError === null;
+  return db !== null && initError === null;
 }
 
 export function getDbInitError() {
@@ -41,44 +36,56 @@ export function getDbInitError() {
 }
 
 export async function getConnection() {
-  if (!pool) {
-    throw new Error('MySQL database is not available');
+  if (!db) {
+    throw new Error('SQLite database is not available');
   }
-  const connection = await pool.getConnection();
-  // Provide a compatible API for existing code
   return {
-    beginTransaction: () => connection.beginTransaction(),
-    commit: () => connection.commit(),
-    rollback: () => connection.rollback(),
+    beginTransaction: async () => await db.run('BEGIN TRANSACTION'),
+    commit: async () => await db.run('COMMIT'),
+    rollback: async () => await db.run('ROLLBACK'),
     execute: async (sql, binds = {}) => {
-      const [rows, fields] = await connection.execute(sql, Object.values(binds));
-      // For SELECT return rows array, for INSERT/UPDATE return result info
+      // Map bind properties to include the colon if using an object map
+      const mappedBinds = {};
+      for (const key of Object.keys(binds)) {
+        mappedBinds[key.startsWith(':') ? key : `:${key}`] = binds[key];
+      }
+
       if (sql.trim().toUpperCase().startsWith('SELECT')) {
-        return [rows];
+        const rows = await db.all(sql, mappedBinds);
+        return [rows, []];
       } else {
-        // rows is ResultSetHeader for non-select
-        return [{ insertId: rows.insertId, affectedRows: rows.affectedRows }];
+        const result = await db.run(sql, mappedBinds);
+        return [{ insertId: result.lastID, affectedRows: result.changes }];
       }
     },
-    release: () => connection.release(),
+    release: () => {},
   };
 }
 
 export async function closePool() {
-  if (pool) {
-    await pool.end();
-    pool = null;
+  if (db) {
+    await db.close();
+    db = null;
   }
 }
 
 export async function executeQuery(sql, binds = {}) {
-  if (!pool) {
-    throw new Error('MySQL database not initialized');
+  if (!db) {
+    throw new Error('SQLite database not initialized');
   }
-  const [rows] = await pool.execute(sql, Object.values(binds));
+  
+  // Format bind parameters mapping key -> :key for sqlite3
+  const mappedBinds = {};
+  for (const key of Object.keys(binds)) {
+    mappedBinds[key.startsWith(':') ? key : `:${key}`] = binds[key];
+  }
+
   if (sql.trim().toUpperCase().startsWith('SELECT')) {
+    const rows = await db.all(sql, mappedBinds);
     return { rows };
   } else {
-    return { insertId: rows.insertId, affectedRows: rows.affectedRows, rows: [] };
+    const result = await db.run(sql, mappedBinds);
+    return { insertId: result.lastID, affectedRows: result.changes, rows: [] };
   }
 }
+

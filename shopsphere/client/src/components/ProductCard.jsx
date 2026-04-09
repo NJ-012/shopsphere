@@ -44,40 +44,15 @@ function ProductCard({
   const addItem = useCartStore((state) => state.addItem);
   const toast = useToastStore();
   const navigate = useNavigate();
-  const cardRef = useRef(null);
 
   const productImage = getProductImageUrl(image_url);
   const finalPrice = current_price || Math.round(price * (1 - discount_pct / 100));
   const outOfStock = stock_qty <= 0;
 
-  /* ── 3D tilt on mouse move ── */
-  function handleMouseMove(e) {
-    const card = cardRef.current;
-    if (!card) return;
-    const rect = card.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    const centerX = rect.width / 2;
-    const centerY = rect.height / 2;
-    const rotateX = ((y - centerY) / centerY) * -6; // max 6deg
-    const rotateY = ((x - centerX) / centerX) * 6;
-    card.style.transform = `perspective(800px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.02,1.02,1.02)`;
-  }
-
-  function handleMouseLeave() {
-    const card = cardRef.current;
-    if (!card) return;
-    card.style.transform = 'perspective(800px) rotateX(0deg) rotateY(0deg) scale3d(1,1,1)';
-  }
-
   return (
     <motion.article
       variants={gridItemVariants}
-      ref={cardRef}
-      onMouseMove={handleMouseMove}
-      onMouseLeave={handleMouseLeave}
-      style={{ transformStyle: 'preserve-3d', willChange: 'transform' }}
-      className="group relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] backdrop-blur-xl shadow-[0_8px_32px_0_rgba(0,0,0,0.25)] transition-[box-shadow] duration-500 hover:shadow-[0_20px_60px_rgba(99,102,241,0.25),0_0_40px_rgba(139,92,246,0.1)]"
+      className="group relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] backdrop-blur-xl shadow-lg transition-all duration-300 hover:scale-105 hover:shadow-2xl"
     >
       {/* ── Image Area ── */}
       <button
@@ -126,17 +101,35 @@ function ProductCard({
           <Heart className={`h-4 w-4 transition-all duration-300 ${liked ? 'fill-rose-500 text-rose-500 drop-shadow-[0_0_8px_rgba(244,63,94,0.6)]' : 'text-gray-300'}`} />
         </motion.button>
 
-        {/* Quick View overlay button — appears on hover */}
-        <div className="absolute bottom-4 left-0 right-0 flex justify-center translate-y-4 opacity-0 transition-all duration-500 group-hover:translate-y-0 group-hover:opacity-100">
-          <span className="flex items-center gap-2 rounded-full bg-white/20 backdrop-blur-xl px-5 py-2 text-xs font-semibold text-white border border-white/20 shadow-lg">
-            <Eye className="h-3.5 w-3.5" />
-            Quick View
-          </span>
+        {/* Add to cart overlay button — appears on hover */}
+        <div className="absolute inset-x-0 bottom-4 z-20 flex justify-center translate-y-4 opacity-0 transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100">
+          <motion.button
+            whileHover={{ scale: outOfStock ? 1 : 1.05 }}
+            whileTap={{ scale: outOfStock ? 1 : 0.95 }}
+            type="button"
+            disabled={outOfStock}
+            onClick={(e) => {
+              e.stopPropagation();
+              addItem({
+                prod_id,
+                prod_name,
+                price: finalPrice,
+                image_url: productImage,
+                stock_qty,
+                vendor_name: shop_name,
+              });
+              toast.success(`${prod_name} added to cart`);
+            }}
+            className="flex items-center gap-2 rounded-full bg-indigo-600 px-6 py-2.5 text-sm font-semibold text-white shadow-lg transition-colors hover:bg-indigo-500 disabled:cursor-not-allowed disabled:bg-gray-600"
+          >
+            <ShoppingCart className="h-4 w-4" />
+            {outOfStock ? 'Unavailable' : 'Add to cart'}
+          </motion.button>
         </div>
 
         {/* Out of stock */}
         {outOfStock && (
-          <div className="absolute inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="absolute inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm z-10">
             <span className="rounded-full border border-white/20 bg-black/50 px-4 py-2 text-xs font-bold uppercase tracking-wider text-white">
               Out of stock
             </span>
@@ -177,29 +170,6 @@ function ProductCard({
             </span>
           )}
         </div>
-
-        {/* Add to cart — slides up on hover */}
-        <motion.button
-          whileHover={{ scale: outOfStock ? 1 : 1.03 }}
-          whileTap={{ scale: outOfStock ? 1 : 0.97 }}
-          type="button"
-          disabled={outOfStock}
-          onClick={() => {
-            addItem({
-              prod_id,
-              prod_name,
-              price: finalPrice,
-              image_url: productImage,
-              stock_qty,
-              vendor_name: shop_name,
-            });
-            toast.success(`${prod_name} added to cart`);
-          }}
-          className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 px-5 py-3 text-sm font-semibold text-white transition-all duration-300 hover:from-indigo-500 hover:to-purple-500 hover:shadow-[0_0_20px_rgba(99,102,241,0.4)] disabled:cursor-not-allowed disabled:bg-none disabled:bg-gray-800 disabled:text-gray-500 disabled:shadow-none"
-        >
-          <ShoppingCart className="h-4 w-4" />
-          {outOfStock ? 'Unavailable' : 'Add to cart'}
-        </motion.button>
       </div>
     </motion.article>
   );
