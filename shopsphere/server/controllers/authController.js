@@ -18,6 +18,7 @@ function normalizeUser(user) {
     email: user.EMAIL,
     role: user.ROLE,
     phone: user.PHONE || '',
+    vendor_id: user.VENDOR_ID || null,
     shop_name: user.SHOP_NAME || '',
     is_verified: user.IS_VERIFIED ? true : false,
     created_at: user.CREATED_AT,
@@ -37,6 +38,7 @@ function signUserToken(user) {
       user_id: user.USER_ID,
       role: user.ROLE,
       email: user.EMAIL,
+      vendor_id: user.VENDOR_ID || null,
     },
     process.env.JWT_SECRET || 'secret123',
     { expiresIn: '7d' }

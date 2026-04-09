@@ -6,6 +6,7 @@ import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import LoadingSpinner from './components/LoadingSpinner';
 import ErrorBoundary from './components/ErrorBoundary';
+import useThemeStore from './store/themeStore';
 
 import CustomCursor from './components/ui/CustomCursor';
 import PageTransition from './components/ui/PageTransition';
@@ -24,6 +25,16 @@ const OrderDetailPage = lazy(() => import('./pages/OrderDetailPage'));
 const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 const VirtualStudioPage = lazy(() => import('./pages/VirtualStudioPage'));
 const SavedLooksPage = lazy(() => import('./pages/SavedLooksPage'));
+
+// Vendor Pages
+const VendorLogin = lazy(() => import('./pages/vendor/Login'));
+const VendorDashboard = lazy(() => import('./pages/vendor/Dashboard'));
+const VendorProductList = lazy(() => import('./pages/vendor/ProductList'));
+const VendorProductForm = lazy(() => import('./pages/vendor/ProductForm'));
+
+// Admin Pages
+const AdminLogin = lazy(() => import('./pages/admin/Login'));
+const AdminDashboard = lazy(() => import('./pages/admin/Dashboard'));
 
 function ProtectedRoute({ children, roles = null }) {
   const { user, isHydrated } = useAuthStore();
@@ -68,7 +79,12 @@ function LocalToastContainer() {
 
 function AppShell() {
   const { user, fetchCurrentUser, isHydrated } = useAuthStore();
+  const { initTheme } = useThemeStore();
   const location = useLocation();
+
+  useEffect(() => {
+    initTheme();
+  }, [initTheme]);
 
   useEffect(() => {
     if (isHydrated && user) {
@@ -97,6 +113,18 @@ function AppShell() {
               <Route path="/my-looks" element={<ProtectedRoute><PageTransition><SavedLooksPage /></PageTransition></ProtectedRoute>} />
               <Route path="/login" element={<LoginRegisterGuard><PageTransition><LoginPage /></PageTransition></LoginRegisterGuard>} />
               <Route path="/register" element={<LoginRegisterGuard><PageTransition><RegisterPage /></PageTransition></LoginRegisterGuard>} />
+              
+              {/* Vendor Routes */}
+              <Route path="/vendor/login" element={<LoginRegisterGuard><PageTransition><VendorLogin /></PageTransition></LoginRegisterGuard>} />
+              <Route path="/vendor/dashboard" element={<ProtectedRoute roles={['VENDOR']}><PageTransition><VendorDashboard /></PageTransition></ProtectedRoute>} />
+              <Route path="/vendor/products" element={<ProtectedRoute roles={['VENDOR']}><PageTransition><VendorProductList /></PageTransition></ProtectedRoute>} />
+              <Route path="/vendor/products/new" element={<ProtectedRoute roles={['VENDOR']}><PageTransition><VendorProductForm /></PageTransition></ProtectedRoute>} />
+              <Route path="/vendor/products/edit/:id" element={<ProtectedRoute roles={['VENDOR']}><PageTransition><VendorProductForm /></PageTransition></ProtectedRoute>} />
+              
+              {/* Admin Routes */}
+              <Route path="/admin/login" element={<LoginRegisterGuard><PageTransition><AdminLogin /></PageTransition></LoginRegisterGuard>} />
+              <Route path="/admin/dashboard" element={<ProtectedRoute roles={['ADMIN']}><PageTransition><AdminDashboard /></PageTransition></ProtectedRoute>} />
+              
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </AnimatePresence>

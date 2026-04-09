@@ -1,5 +1,4 @@
 import sqlite3 from 'sqlite3';
-import { open } from 'sqlite';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -10,21 +9,20 @@ let db = null;
 let initError = null;
 
 export async function initPool() {
-  try {
-    db = await open({
-      filename: path.resolve(__dirname, 'shopsphere.sqlite'),
-      driver: sqlite3.Database
+  return new Promise((resolve) => {
+    const dbPath = path.resolve(__dirname, 'shopsphere.sqlite');
+    db = new sqlite3.Database(dbPath, (err) => {
+      if (err) {
+        initError = err;
+        console.warn('SQLite unavailable:', err.message);
+        resolve(false);
+      } else {
+        initError = null;
+        console.log('SQLite database active');
+        resolve(true);
+      }
     });
-    // Test connection
-    await db.get('SELECT 1');
-    initError = null;
-    console.log('SQLite database active');
-    return true;
-  } catch (error) {
-    initError = error;
-    console.warn('SQLite unavailable:', error.message);
-    return false;
-  }
+  });
 }
 
 export function isDbAvailable() {
@@ -40,23 +38,28 @@ export async function getConnection() {
     throw new Error('SQLite database is not available');
   }
   return {
-    beginTransaction: async () => await db.run('BEGIN TRANSACTION'),
-    commit: async () => await db.run('COMMIT'),
-    rollback: async () => await db.run('ROLLBACK'),
+    beginTransaction: () => new Promise((resolve, reject) => db.run('BEGIN TRANSACTION', (err) => err ? reject(err) : resolve())),
+    commit: () => new Promise((resolve, reject) => db.run('COMMIT', (err) => err ? reject(err) : resolve())),
+    rollback: () => new Promise((resolve, reject) => db.run('ROLLBACK', (err) => err ? reject(err) : resolve())),
     execute: async (sql, binds = {}) => {
-      // Map bind properties to include the colon if using an object map
       const mappedBinds = {};
       for (const key of Object.keys(binds)) {
         mappedBinds[key.startsWith(':') ? key : `:${key}`] = binds[key];
       }
 
-      if (sql.trim().toUpperCase().startsWith('SELECT')) {
-        const rows = await db.all(sql, mappedBinds);
-        return [rows, []];
-      } else {
-        const result = await db.run(sql, mappedBinds);
-        return [{ insertId: result.lastID, affectedRows: result.changes }];
-      }
+      return new Promise((resolve, reject) => {
+        if (sql.trim().toUpperCase().startsWith('SELECT')) {
+          db.all(sql, mappedBinds, (err, rows) => {
+            if (err) return reject(err);
+            resolve([rows, []]);
+          });
+        } else {
+          db.run(sql, mappedBinds, function(err) {
+            if (err) return reject(err);
+            resolve([{ insertId: this.lastID, affectedRows: this.changes }]);
+          });
+        }
+      });
     },
     release: () => {},
   };
@@ -64,8 +67,13 @@ export async function getConnection() {
 
 export async function closePool() {
   if (db) {
-    await db.close();
-    db = null;
+    return new Promise((resolve, reject) => {
+      db.close((err) => {
+        if (err) return reject(err);
+        db = null;
+        resolve();
+      });
+    });
   }
 }
 
@@ -74,18 +82,23 @@ export async function executeQuery(sql, binds = {}) {
     throw new Error('SQLite database not initialized');
   }
   
-  // Format bind parameters mapping key -> :key for sqlite3
   const mappedBinds = {};
   for (const key of Object.keys(binds)) {
     mappedBinds[key.startsWith(':') ? key : `:${key}`] = binds[key];
   }
 
-  if (sql.trim().toUpperCase().startsWith('SELECT')) {
-    const rows = await db.all(sql, mappedBinds);
-    return { rows };
-  } else {
-    const result = await db.run(sql, mappedBinds);
-    return { insertId: result.lastID, affectedRows: result.changes, rows: [] };
-  }
+  return new Promise((resolve, reject) => {
+    if (sql.trim().toUpperCase().startsWith('SELECT')) {
+      db.all(sql, mappedBinds, (err, rows) => {
+        if (err) return reject(err);
+        resolve({ rows });
+      });
+    } else {
+      db.run(sql, mappedBinds, function(err) {
+        if (err) return reject(err);
+        resolve({ insertId: this.lastID, affectedRows: this.changes, rows: [] });
+      });
+    }
+  });
 }
 

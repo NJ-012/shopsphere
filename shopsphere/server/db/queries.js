@@ -15,7 +15,7 @@ export { isDbAvailable };
 
 export async function testConnection() {
   if (!isDbAvailable()) {
-    throw new Error('MySQL not available');
+    throw new Error('Database not available');
   }
 
   const result = await executeQuery('SELECT 1 AS TEST');
@@ -31,6 +31,7 @@ export async function getUserByEmail(email) {
       u.PASSWORD_HASH,
       u.ROLE,
       u.CREATED_AT,
+      v.VENDOR_ID,
       v.SHOP_NAME,
       v.IS_VERIFIED
     FROM USERS u
@@ -51,6 +52,7 @@ export async function getUserById(userId) {
       u.PASSWORD_HASH,
       u.ROLE,
       u.CREATED_AT,
+      v.VENDOR_ID,
       v.SHOP_NAME,
       v.IS_VERIFIED
     FROM USERS u
@@ -148,6 +150,7 @@ export async function getProductById(prodId) {
       p.IMAGE_URL,
       p.DISCOUNT_PCT,
       p.IS_ACTIVE,
+      p.VENDOR_ID,
       v.SHOP_NAME,
       c.CAT_NAME,
       c.CAT_SLUG
@@ -159,6 +162,69 @@ export async function getProductById(prodId) {
   );
 
   return firstRow(result);
+}
+
+export async function createProduct({ vendor_id, cat_id, prod_name, description, price, stock_qty, image_url, discount_pct = 0 }) {
+  const result = await executeQuery(
+    `INSERT INTO PRODUCTS (VENDOR_ID, CAT_ID, PROD_NAME, DESCRIPTION, PRICE, STOCK_QTY, IMAGE_URL, DISCOUNT_PCT, RATING, REVIEW_COUNT)
+     VALUES (:vendor_id, :cat_id, :prod_name, :description, :price, :stock_qty, :image_url, :discount_pct, 4.0, 0)`,
+    { vendor_id, cat_id, prod_name, description, price, stock_qty, image_url, discount_pct }
+  );
+  return result.insertId;
+}
+
+export async function updateProduct(prodId, { cat_id, prod_name, description, price, stock_qty, image_url, discount_pct }) {
+  await executeQuery(
+    `UPDATE PRODUCTS
+     SET CAT_ID = :cat_id,
+         PROD_NAME = :prod_name,
+         DESCRIPTION = :description,
+         PRICE = :price,
+         STOCK_QTY = :stock_qty,
+         IMAGE_URL = :image_url,
+         DISCOUNT_PCT = :discount_pct
+     WHERE PROD_ID = :prodId`,
+    { prodId, cat_id, prod_name, description, price, stock_qty, image_url, discount_pct }
+  );
+}
+
+export async function deleteProduct(prodId) {
+  await executeQuery(`DELETE FROM PRODUCTS WHERE PROD_ID = :prodId`, { prodId });
+}
+
+export async function getVendorProducts(vendorId) {
+  const result = await executeQuery(
+    `SELECT p.*, c.CAT_NAME FROM PRODUCTS p
+     JOIN CATEGORIES c ON p.CAT_ID = c.CAT_ID
+     WHERE p.VENDOR_ID = :vendorId`,
+    { vendorId }
+  );
+  return normalizeRows(result);
+}
+
+// Admin queries
+export async function adminGetAllUsers() {
+  const result = await executeQuery(`SELECT USER_ID, FULL_NAME, EMAIL, ROLE, CREATED_AT FROM USERS`);
+  return normalizeRows(result);
+}
+
+export async function adminGetAllVendors() {
+  const result = await executeQuery(
+    `SELECT v.VENDOR_ID, v.SHOP_NAME, u.FULL_NAME, u.EMAIL, v.IS_VERIFIED 
+     FROM VENDORS v 
+     JOIN USERS u ON v.USER_ID = u.USER_ID`
+  );
+  return normalizeRows(result);
+}
+
+export async function adminGetAllOrders() {
+  const result = await executeQuery(
+    `SELECT o.*, u.FULL_NAME as CUSTOMER_NAME 
+     FROM ORDERS o 
+     JOIN USERS u ON o.CUSTOMER_ID = u.USER_ID 
+     ORDER BY o.ORDERED_AT DESC`
+  );
+  return normalizeRows(result);
 }
 
 export async function getCategories() {

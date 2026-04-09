@@ -4,7 +4,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, Search, ShoppingBag, X } from 'lucide-react';
 import useAuthStore from '../store/authStore';
 import useCartStore from '../store/cartStore';
+import useThemeStore from '../store/themeStore';
 import CartDrawer from './CartDrawer';
+import { Sun, Moon } from 'lucide-react';
 
 const navLinks = [
   { label: 'Explore', to: '/' },
@@ -19,6 +21,7 @@ export default function Navbar() {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
   const { user, logout } = useAuthStore();
+  const { theme, toggleTheme } = useThemeStore();
   const totalItems = useCartStore((state) => state.getTotalItems());
   const navigate = useNavigate();
 
@@ -92,13 +95,22 @@ export default function Navbar() {
               <ShoppingBag className="h-5 w-5" />
               {totalItems > 0 && (
                 <motion.span 
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  className="absolute 0 top-0 right-0 flex h-4 min-w-4 items-center justify-center rounded-full bg-pink-500 text-[9px] font-bold text-white shadow-[0_0_10px_rgba(236,72,153,0.8)]"
+                   initial={{ scale: 0 }}
+                   animate={{ scale: 1 }}
+                   className="absolute 0 top-0 right-0 flex h-4 min-w-4 items-center justify-center rounded-full bg-pink-500 text-[9px] font-bold text-white shadow-[0_0_10px_rgba(236,72,153,0.8)]"
                 >
                   {totalItems}
                 </motion.span>
               )}
+            </button>
+
+            <button
+              type="button"
+              onClick={toggleTheme}
+              className="p-2 text-white hover:text-indigo-300 transition-colors"
+              title={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
+            >
+              {theme === 'light' ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
             </button>
 
             {user ? (
@@ -128,6 +140,12 @@ export default function Navbar() {
                       </div>
                       <div className="mt-2 space-y-1">
                         <button onClick={() => navigate('/profile')} className="w-full rounded-xl px-3 py-2 text-left text-sm text-gray-300 transition hover:bg-white/10 hover:text-white">Profile</button>
+                        {user.role === 'VENDOR' && (
+                          <button onClick={() => navigate('/vendor/dashboard')} className="w-full rounded-xl px-3 py-2 text-left text-sm text-indigo-300 transition hover:bg-white/10 hover:text-white">Vendor Dashboard</button>
+                        )}
+                        {user.role === 'ADMIN' && (
+                          <button onClick={() => navigate('/admin/dashboard')} className="w-full rounded-xl px-3 py-2 text-left text-sm text-amber-300 transition hover:bg-white/10 hover:text-white">Admin Dashboard</button>
+                        )}
                         <button onClick={() => navigate('/orders')} className="w-full rounded-xl px-3 py-2 text-left text-sm text-gray-300 transition hover:bg-white/10 hover:text-white">Orders</button>
                         <button onClick={async () => { await logout(); navigate('/login'); }} className="w-full rounded-xl px-3 py-2 text-left text-sm text-pink-400 transition hover:bg-pink-500/20">Logout</button>
                       </div>

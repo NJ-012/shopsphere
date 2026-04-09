@@ -16,7 +16,8 @@ export const protect = async (req, res, next) => {
     req.user = {
       user_id: decoded.user_id,
       role: decoded.role,
-      email: decoded.email
+      email: decoded.email,
+      vendor_id: decoded.vendor_id || null
     };
     
     next();
@@ -38,7 +39,8 @@ export const optionalProtect = async (req, _res, next) => {
     req.user = {
       user_id: decoded.user_id,
       role: decoded.role,
-      email: decoded.email
+      email: decoded.email,
+      vendor_id: decoded.vendor_id || null
     };
 
     next();
