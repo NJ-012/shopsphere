@@ -23,8 +23,6 @@ const CheckoutPage = lazy(() => import('./pages/CheckoutPage'));
 const OrderHistoryPage = lazy(() => import('./pages/OrderHistoryPage'));
 const OrderDetailPage = lazy(() => import('./pages/OrderDetailPage'));
 const ProfilePage = lazy(() => import('./pages/ProfilePage'));
-const VirtualStudioPage = lazy(() => import('./pages/VirtualStudioPage'));
-const SavedLooksPage = lazy(() => import('./pages/SavedLooksPage'));
 
 // Vendor Pages
 const VendorLogin = lazy(() => import('./pages/vendor/Login'));
@@ -109,8 +107,6 @@ function AppShell() {
               <Route path="/orders/:id" element={<ProtectedRoute><PageTransition><OrderDetailPage /></PageTransition></ProtectedRoute>} />
               <Route path="/profile" element={<ProtectedRoute><PageTransition><ProfilePage /></PageTransition></ProtectedRoute>} />
               <Route path="/wishlist" element={<ProtectedRoute><PageTransition><WishlistPage /></PageTransition></ProtectedRoute>} />
-              <Route path="/studio" element={<ProtectedRoute><PageTransition><VirtualStudioPage /></PageTransition></ProtectedRoute>} />
-              <Route path="/my-looks" element={<ProtectedRoute><PageTransition><SavedLooksPage /></PageTransition></ProtectedRoute>} />
               <Route path="/login" element={<LoginRegisterGuard><PageTransition><LoginPage /></PageTransition></LoginRegisterGuard>} />
               <Route path="/register" element={<LoginRegisterGuard><PageTransition><RegisterPage /></PageTransition></LoginRegisterGuard>} />
               

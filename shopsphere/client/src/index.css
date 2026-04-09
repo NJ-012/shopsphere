@@ -15,19 +15,27 @@
 
 @layer base {
   :root {
-    --background: #f8fafc;
-    --foreground: #020617;
+    --background: #ffffff;
+    --foreground: #0f172a;
     --glass-bg: rgba(255, 255, 255, 0.7);
     --glass-border: rgba(0, 0, 0, 0.1);
-    --mesh-opacity: 0.1;
+    --mesh-opacity: 0.12;
+    --card-bg: #ffffff;
+    --card-border: #f1f5f9;
+    --text-muted: #64748b;
+    --text-accent: #4f46e5;
   }
 
   .dark {
     --background: #030014;
-    --foreground: #ffffff;
+    --foreground: #f8fafc;
     --glass-bg: rgba(255, 255, 255, 0.03);
     --glass-border: rgba(255, 255, 255, 0.08);
-    --mesh-opacity: 0.15;
+    --mesh-opacity: 0.18;
+    --card-bg: #0a0118;
+    --card-border: rgba(255, 255, 255, 0.08);
+    --text-muted: #94a3b8;
+    --text-accent: #818cf8;
   }
 
   body {
@@ -39,7 +47,8 @@
       radial-gradient(circle at 15% 50%, rgba(99, 102, 241, var(--mesh-opacity)), transparent 25%),
       radial-gradient(circle at 85% 30%, rgba(236, 72, 153, var(--mesh-opacity)), transparent 25%);
     background-attachment: fixed;
-    transition: background-color 0.5s ease, color 0.5s ease;
+    transition: background-color 0.4s cubic-bezier(0.4, 0, 0.2, 1), 
+                color 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   }
 }
 

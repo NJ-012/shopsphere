@@ -16,10 +16,9 @@ function Footer() {
         <div>
           <p className="text-sm font-bold uppercase tracking-[0.25em] text-slate-400">Explore</p>
           <div className="mt-4 space-y-3 text-sm text-slate-300">
-            <Link to="/">Home</Link>
-            <Link to="/shop" className="block">Shop</Link>
-            <Link to="/register" className="block">Create account</Link>
-            <Link to="/studio" className="block">Studio</Link>
+            <Link to="/" className="block hover:text-white transition-colors">Home</Link>
+            <Link to="/shop" className="block hover:text-white transition-colors">Shop</Link>
+            <Link to="/register" className="block hover:text-white transition-colors">Create account</Link>
           </div>
         </div>
 

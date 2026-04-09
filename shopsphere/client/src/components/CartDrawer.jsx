@@ -50,39 +50,45 @@ function CartDrawer({ isOpen, onClose }) {
                 </div>
               ) : (
                 items.map((item) => (
-                  <div key={`${item.prod_id}-${item.variant_id || 'base'}`} className="rounded-[1.75rem] bg-white p-4 shadow-sm">
+                  <div key={`${item.prod_id}-${item.variant_id || 'base'}`} className="rounded-[1.75rem] border border-slate-100 bg-white p-4 transition-all duration-300 hover:shadow-md">
                     <div className="flex gap-4">
-                      <img
-                        src={item.image_url}
-                        alt={item.prod_name}
-                        className="h-24 w-24 rounded-2xl object-cover"
-                      />
-                      <div className="flex-1">
-                        <p className="text-xs uppercase tracking-[0.2em] text-slate-400">{item.vendor_name || item.shop_name}</p>
-                        <h3 className="mt-1 font-semibold text-slate-900">{item.prod_name}</h3>
-                        <p className="mt-2 text-sm font-bold text-slate-900">Rs. {(item.price * item.quantity).toLocaleString()}</p>
-                        <div className="mt-3 flex items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => updateQuantity(item.prod_id, item.variant_id, item.quantity - 1)}
-                            className="h-9 w-9 rounded-full border border-slate-200"
-                          >
-                            -
-                          </button>
-                          <span className="w-8 text-center text-sm font-semibold">{item.quantity}</span>
-                          <button
-                            type="button"
-                            onClick={() => updateQuantity(item.prod_id, item.variant_id, item.quantity + 1)}
-                            className="h-9 w-9 rounded-full border border-slate-200"
-                          >
-                            +
-                          </button>
+                      <div className="h-24 w-24 shrink-0 overflow-hidden rounded-2xl bg-slate-50">
+                        <img
+                          src={item.image_url}
+                          alt={item.prod_name}
+                          className="h-full w-full object-cover"
+                        />
+                      </div>
+                      <div className="flex flex-1 flex-col justify-between">
+                        <div>
+                          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">{item.vendor_name || item.shop_name}</p>
+                          <h3 className="mt-1 line-clamp-1 text-sm font-semibold text-slate-900">{item.prod_name}</h3>
+                        </div>
+                        <div className="flex items-end justify-between">
+                          <div className="flex items-center gap-1 rounded-full bg-slate-50 px-1 py-1 ring-1 ring-inset ring-slate-200">
+                            <button
+                              type="button"
+                              onClick={() => updateQuantity(item.prod_id, item.variant_id, item.quantity - 1)}
+                              className="flex h-7 w-7 items-center justify-center rounded-full bg-white text-slate-600 shadow-sm transition hover:text-slate-950"
+                            >
+                              -
+                            </button>
+                            <span className="w-6 text-center text-xs font-bold text-slate-900">{item.quantity}</span>
+                            <button
+                              type="button"
+                              onClick={() => updateQuantity(item.prod_id, item.variant_id, item.quantity + 1)}
+                              className="flex h-7 w-7 items-center justify-center rounded-full bg-white text-slate-600 shadow-sm transition hover:text-slate-950"
+                            >
+                              +
+                            </button>
+                          </div>
+                          <p className="text-sm font-extrabold text-slate-950">Rs. {(item.price * item.quantity).toLocaleString()}</p>
                         </div>
                       </div>
                       <button
                         type="button"
                         onClick={() => removeItem(item.prod_id, item.variant_id)}
-                        className="self-start rounded-full p-2 text-slate-400 transition hover:bg-slate-100 hover:text-rose-500"
+                        className="flex h-8 w-8 items-center justify-center self-start rounded-full text-slate-300 transition hover:bg-rose-50 hover:text-rose-500"
                       >
                         <X className="h-4 w-4" />
                       </button>
