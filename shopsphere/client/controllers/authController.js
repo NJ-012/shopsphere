@@ -25,7 +25,7 @@
         StateService.pushToast(vm.isRegister ? 'Account created' : 'Welcome back', vm.isRegister ? 'Sign in with your new credentials to continue.' : 'Login completed successfully.', 'success');
         $location.path(vm.isRegister ? '/login' : '/');
       }).catch(function (error) {
-        vm.error = error.data && error.data.error ? error.data.error : 'Authentication failed.';
+        vm.error = error.data && error.data.message ? error.data.message : 'Authentication failed.';
       }).finally(function () {
         vm.loading = false;
       });

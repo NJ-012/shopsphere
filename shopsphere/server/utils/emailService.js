@@ -3,17 +3,36 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const transporter = nodemailer.createTransport({
-  host: 'smtp-relay.brevo.com',
-  port: 587,
-  auth: {
-    user: process.env.FROM_EMAIL,
-    pass: process.env.BREVO_API_KEY,
-  },
-});
+const emailEnabled = Boolean(process.env.FROM_EMAIL && process.env.BREVO_API_KEY);
+let didWarnMissingConfig = false;
+const transporter = emailEnabled
+  ? nodemailer.createTransport({
+      host: 'smtp-relay.brevo.com',
+      port: 587,
+      auth: {
+        user: process.env.FROM_EMAIL,
+        pass: process.env.BREVO_API_KEY,
+      },
+    })
+  : null;
+
+function skipIfEmailDisabled() {
+  if (!emailEnabled || !transporter) {
+    if (!didWarnMissingConfig) {
+      console.warn('Email skipped: missing SMTP config');
+      didWarnMissingConfig = true;
+    }
+    return true;
+  }
+  return false;
+}
 
 export async function sendOrderConfirmation(to, orderDetails) {
   try {
+    if (skipIfEmailDisabled()) {
+      return { skipped: true };
+    }
+
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h2 style="color: #2563eb;">Order Confirmed! #${orderDetails.order_id}</h2>
@@ -42,6 +61,10 @@ export async function sendOrderConfirmation(to, orderDetails) {
 
 export async function sendWelcomeEmail(to, fullName) {
   try {
+    if (skipIfEmailDisabled()) {
+      return { skipped: true };
+    }
+
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h2 style="color: #2563eb;">Welcome to ShopSphere, ${fullName}!</h2>
@@ -63,6 +86,10 @@ export async function sendWelcomeEmail(to, fullName) {
 
 export async function sendVendorApprovalEmail(to, shopName) {
   try {
+    if (skipIfEmailDisabled()) {
+      return { skipped: true };
+    }
+
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h2 style="color: #10b981;">Your ShopSphere Store is Approved!</h2>

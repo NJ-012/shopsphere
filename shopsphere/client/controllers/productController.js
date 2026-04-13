@@ -6,6 +6,22 @@
     vm.relatedProducts = [];
     vm.wishlistIds = StateService.get('shopsphere_wishlist', []);
 
+    vm.fallbackDetailImage = function(img) {
+      const altText = img.alt.toLowerCase();
+      let keywords = 'product';
+      
+      if (altText.includes('shirt') || altText.includes('tshirt')) keywords = 'shirt';
+      else if (altText.includes('laptop')) keywords = 'laptop';
+      else if (altText.includes('tv')) keywords = 'television';
+      else if (altText.includes('coffee')) keywords = 'coffee machine';
+      else if (altText.includes('phone')) keywords = 'smartphone';
+      else if (altText.includes('jacket')) keywords = 'jacket';
+      else if (altText.includes('earbuds')) keywords = 'earbuds';
+      
+      img.src = `https://source.unsplash.com/featured/800x800/?${keywords}`;
+      img.onerror = null;
+    };
+
     vm.addToCart = function () {
       CartService.addItem(vm.product, vm.quantity);
       StateService.pushToast('Added to cart', vm.product.prod_name + ' is ready in your bag.', 'success');

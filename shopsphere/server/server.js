@@ -5,7 +5,6 @@ import dotenv from 'dotenv';
 import { initPool, isDbAvailable, getDbInitError } from './db/db.js';
 import authRoutes from './routes/authRoutes.js';
 import orderRoutes from './routes/orderRoutes.js';
-import paymentRoutes from './routes/paymentRoutes.js';
 import productRoutes from './routes/productRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
 
@@ -13,38 +12,68 @@ dotenv.config();
 
 const app = express();
 const clientOrigin = process.env.CLIENT_URL || 'http://localhost:5173';
+const allowedOrigins = [
+  clientOrigin,
+  'http://localhost:5173',
+  'http://127.0.0.1:5173',
+  'http://10.168.32.251:5173',
+  'http://localhost:8080',
+  'http://127.0.0.1:8080',
+  'http://localhost:3000',
+  'http://127.0.0.1:3000'
+];
+const normalizedAllowedOrigins = allowedOrigins.map((origin) => String(origin).trim().replace(/\/$/, '').toLowerCase());
+const corsOptions = {
+  origin(origin, callback) {
+    const normalizedOrigin = origin ? String(origin).trim().replace(/\/$/, '').toLowerCase() : '';
+    if (!origin || normalizedAllowedOrigins.includes(normalizedOrigin)) {
+      return callback(null, true);
+    }
+    return callback(new Error(`CORS blocked for origin: ${origin}`));
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+};
 
-app.use(cors({
-  origin: clientOrigin,
-  credentials: true
-}));
 app.use(express.json({ limit: '2mb' }));
+app.use(express.urlencoded({ extended: true }));
+app.use(cors(corsOptions));
+app.options(/.*/, cors(corsOptions));
 app.use(cookieParser());
 
 app.get('/api/status', (_req, res) => {
   res.json({
-    ok: true,
-    dbConnected: isDbAvailable(),
-    mode: isDbAvailable() ? 'sqlite' : 'unavailable',
-    dbError: getDbInitError() ? getDbInitError().message : null,
-    clientOrigin
+    success: true,
+    data: {
+      dbConnected: isDbAvailable(),
+      mode: isDbAvailable() ? 'sqlite' : 'unavailable',
+      dbError: getDbInitError() ? getDbInitError().message : null,
+      clientOrigin
+    }
   });
 });
 
 app.use('/api/auth', authRoutes);
 app.use('/api/orders', orderRoutes);
-app.use('/api/payment', paymentRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/admin', adminRoutes);
 
 app.use((req, res) => {
-  res.status(404).json({ error: `Route not found: ${req.method} ${req.originalUrl}` });
+  res.status(404).json({ success: false, message: `Route not found: ${req.method} ${req.originalUrl}` });
 });
 
-app.use((err, _req, res, _next) => {
-  console.error('Unhandled error:', err);
-  res.status(err.status || 500).json({
-    error: err.message || 'Internal server error'
+app.use((err, req, res, _next) => {
+  console.error(err);
+  if (err.message && err.message.startsWith('CORS blocked')) {
+    return res.status(403).json({
+      success: false,
+      message: err.message
+    });
+  }
+  res.status(500).json({
+    success: false,
+    message: 'Internal server error'
   });
 });
 

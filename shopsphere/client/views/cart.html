@@ -1,11 +1,11 @@
-<section class="shell section-grid">
+<section class="shell section-grid commerce-layout">
   <article>
     <div class="section-header">
       <h1>Your cart</h1>
       <span>{{ vm.items.length }} line items</span>
     </div>
     <div class="list-card" ng-repeat="item in vm.items track by item.prod_id">
-      <img ng-src="{{ item.image_url }}" alt="{{ item.prod_name }}" />
+      <img ng-src="{{ item.image_url }}" alt="{{ item.prod_name }}" onerror="this.src='https://source.unsplash.com/featured/?product'" />
       <div>
         <h3>{{ item.prod_name }}</h3>
         <p>{{ item.shop_name }}</p>

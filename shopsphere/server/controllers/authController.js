@@ -47,6 +47,7 @@ function signUserToken(user) {
 
 export const register = async (req, res) => {
   try {
+    const body = req.body || {};
     const {
       full_name,
       email,
@@ -54,24 +55,24 @@ export const register = async (req, res) => {
       role = 'CUSTOMER',
       phone,
       shop_name,
-    } = req.body;
+    } = body;
 
     if (!full_name || !email || !password || !phone) {
-      return res.status(400).json({ error: 'Full name, email, password and phone are required.' });
+      return res.status(400).json({ success: false, message: 'Full name, email, password and phone are required.' });
     }
 
-    if (!['CUSTOMER', 'VENDOR', 'ADMIN'].includes(role)) {
-      return res.status(400).json({ error: 'Only CUSTOMER/VENDOR registrations are allowed.' });
+    if (!['CUSTOMER', 'VENDOR'].includes(role)) {
+      return res.status(400).json({ success: false, message: 'Only CUSTOMER/VENDOR registrations are allowed.' });
     }
 
     if (role === 'VENDOR' && !shop_name) {
-      return res.status(400).json({ error: 'Shop name is required for vendor registration.' });
+      return res.status(400).json({ success: false, message: 'Shop name is required for vendor registration.' });
     }
 
     const normalizedEmail = String(email).trim().toLowerCase();
     const existingUser = await getUserByEmail(normalizedEmail);
     if (existingUser) {
-      return res.status(409).json({ error: 'Email already registered.' });
+      return res.status(409).json({ success: false, message: 'Email already registered.' });
     }
 
     const passwordHash = await bcrypt.hash(password, 10);
@@ -95,34 +96,38 @@ export const register = async (req, res) => {
     } catch {}
 
     res.status(201).json({
-      message: 'Registered successfully.',
-      user: sanitizeUser(createdUser, passwordHash),
-      dbConnected: isDbAvailable(),
+      success: true,
+      data: {
+        message: 'Registered successfully.',
+        user: sanitizeUser(createdUser, passwordHash),
+        dbConnected: isDbAvailable(),
+      }
     });
   } catch (error) {
     console.error('Register error:', error);
-    res.status(error.status || 500).json({ error: error.message || 'Unable to register user.' });
+    res.status(error.status || 500).json({ success: false, message: error.message || 'Unable to register user.' });
   }
 };
 
 export const login = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const body = req.body || {};
+    const { email, password } = body;
 
     if (!email || !password) {
-      return res.status(400).json({ error: 'Email and password are required.' });
+      return res.status(400).json({ success: false, message: 'Email and password are required.' });
     }
 
     const normalizedEmail = String(email).trim().toLowerCase();
     const user = await getUserByEmail(normalizedEmail);
 
     if (!user || !user.PASSWORD_HASH) {
-      return res.status(401).json({ error: 'Invalid credentials.' });
+      return res.status(401).json({ success: false, message: 'Invalid credentials.' });
     }
 
     const isMatch = await bcrypt.compare(password, user.PASSWORD_HASH);
     if (!isMatch) {
-      return res.status(401).json({ error: 'Invalid credentials.' });
+      return res.status(401).json({ success: false, message: 'Invalid credentials.' });
     }
 
     const token = signUserToken(user);
@@ -135,26 +140,32 @@ export const login = async (req, res) => {
     });
 
     res.json({
-      user: sanitizeUser(user),
-      token,
-      dbConnected: isDbAvailable(),
+      success: true,
+      data: {
+        user: sanitizeUser(user),
+        token,
+        dbConnected: isDbAvailable(),
+      }
     });
   } catch (error) {
     console.error('Login error:', error);
-    res.status(500).json({ error: 'Unable to login right now.' });
+    res.status(500).json({ success: false, message: 'Unable to login right now.' });
   }
 };
 
 export const logout = async (_req, res) => {
-  res.clearCookie('token').json({ message: 'Logged out successfully.' });
+  res.clearCookie('token').json({ success: true, data: { message: 'Logged out successfully.' } });
 };
 
 export const getMe = async (req, res) => {
   try {
     if (!req.user?.user_id) {
       return res.json({
-        user: null,
-        dbConnected: isDbAvailable(),
+        success: true,
+        data: {
+          user: null,
+          dbConnected: isDbAvailable(),
+        }
       });
     }
 
@@ -163,17 +174,23 @@ export const getMe = async (req, res) => {
     if (!user) {
       res.clearCookie('token');
       return res.json({
-        user: null,
-        dbConnected: isDbAvailable(),
+        success: true,
+        data: {
+          user: null,
+          dbConnected: isDbAvailable(),
+        }
       });
     }
 
     res.json({
-      user: sanitizeUser(user),
-      dbConnected: isDbAvailable(),
+      success: true,
+      data: {
+        user: sanitizeUser(user),
+        dbConnected: isDbAvailable(),
+      }
     });
   } catch (error) {
     console.error('Get me error:', error);
-    res.status(500).json({ error: 'Unable to fetch current user.' });
+    res.status(500).json({ success: false, message: 'Unable to fetch current user.' });
   }
 };

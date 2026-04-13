@@ -128,6 +128,10 @@ h1, h2, h3, .brand, .display-title, .hero-title {
   transition: background var(--transition);
 }
 
+:root.light-mode .site-header {
+  background: rgba(245, 245, 245, 0.9);
+}
+
 .navbar {
   display: flex;
   align-items: center;
@@ -189,6 +193,35 @@ h1, h2, h3, .brand, .display-title, .hero-title {
 }
 
 .menu-toggle { display: none; }
+
+/* Theme toggle button */
+.theme-toggle {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  border: none;
+  background: var(--surface);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition);
+  color: var(--ink);
+  font-size: 1.2rem;
+}
+
+.theme-toggle:hover {
+  background: var(--surface-hover);
+  transform: scale(1.05);
+}
+
+.theme-toggle::before {
+  content: '🌙';
+}
+
+:root.light-mode .theme-toggle::before {
+  content: '☀️';
+}
 
 /* ═══════════════════════════════════════
    BUTTONS
@@ -775,23 +808,82 @@ input::placeholder { color: var(--muted); }
 }
 
 .list-card {
-  display: grid;
-  grid-template-columns: 90px 1fr 120px 120px auto;
+  display: flex;
   align-items: center;
-  gap: 1rem;
-  padding: 1rem;
+  gap: 1.5rem;
+  padding: 1.2rem;
   margin-bottom: 1rem;
+  flex-wrap: wrap;
 }
+
 .list-card img {
-  width: 90px;
-  height: 90px;
+  width: 100px;
+  height: 100px;
   object-fit: cover;
   border-radius: 16px;
+  flex-shrink: 0;
+}
+
+.list-card > div:nth-child(2) {
+  flex: 1;
+  min-width: 150px;
+}
+
+.list-card h3 {
+  margin: 0 0 0.4rem;
+  font-size: 1rem;
+  color: #fff;
+}
+
+.list-card p {
+  margin: 0.2rem 0;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.list-card label {
+  display: inline-grid;
+  gap: 0.25rem;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.list-card input[type="number"] {
+  width: 70px;
+  padding: 0.5rem;
+  border-radius: 8px;
+  border: 1px solid var(--glass-border);
+  background: rgba(255,255,255,0.05);
+  color: var(--ink);
+  text-align: center;
+}
+
+.list-card strong {
+  min-width: 100px;
+  text-align: right;
+  color: #fff;
+  font-size: 1.1rem;
+}
+
+.list-card .btn {
+  flex-shrink: 0;
 }
 
 .summary-card, .info-card {
   position: sticky;
   top: 5.5rem;
+}
+
+.commerce-layout {
+  grid-template-columns: minmax(0, 1fr) 320px;
+}
+
+.commerce-layout .list-card {
+  justify-content: space-between;
+}
+
+.commerce-layout .list-card strong {
+  margin-left: auto;
 }
 
 /* ═══════════════════════════════════════
@@ -946,7 +1038,8 @@ code {
   .section-grid,
   .auth-grid,
   .detail-grid,
-  .footer-grid {
+  .footer-grid,
+  .commerce-layout {
     grid-template-columns: 1fr;
   }
 

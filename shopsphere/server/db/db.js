@@ -1,4 +1,5 @@
 import sqlite3 from 'sqlite3';
+import fs from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -8,18 +9,36 @@ const __dirname = path.dirname(__filename);
 let db = null;
 let initError = null;
 
+async function ensureSchema(dbPath) {
+  const schemaPath = path.resolve(__dirname, 'schema.sql');
+  const schemaSql = await fs.readFile(schemaPath, 'utf-8');
+  return new Promise((resolve, reject) => {
+    db.exec(schemaSql, (err) => {
+      if (err) return reject(err);
+      resolve();
+    });
+  });
+}
+
 export async function initPool() {
   return new Promise((resolve) => {
     const dbPath = path.resolve(__dirname, 'shopsphere.sqlite');
-    db = new sqlite3.Database(dbPath, (err) => {
+    db = new sqlite3.Database(dbPath, async (err) => {
       if (err) {
         initError = err;
         console.warn('SQLite unavailable:', err.message);
         resolve(false);
       } else {
-        initError = null;
-        console.log('SQLite database active');
-        resolve(true);
+        try {
+          await ensureSchema(dbPath);
+          initError = null;
+          console.log('SQLite database active');
+          resolve(true);
+        } catch (schemaError) {
+          initError = schemaError;
+          console.error('Failed to initialize SQLite schema:', schemaError.message);
+          resolve(false);
+        }
       }
     });
   });

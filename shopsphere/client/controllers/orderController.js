@@ -6,23 +6,20 @@
     vm.order = null;
 
     vm.cancelOrder = function (orderId) {
-      OrderService.cancel(orderId).then(function (order) {
-        vm.order = order;
+      OrderService.cancel(orderId).then(function () {
         StateService.pushToast('Order updated', 'The order has been cancelled successfully.', 'warning');
-        if (!$routeParams.id) {
-          loadOrders();
-        }
+        return $routeParams.id ? loadOrder() : loadOrders();
       });
     };
 
     function loadOrders() {
-      OrderService.getOrders().then(function (orders) {
+      return OrderService.getOrders().then(function (orders) {
         vm.orders = orders;
       });
     }
 
     function loadOrder() {
-      OrderService.getById(vm.orderId).then(function (order) {
+      return OrderService.getById(vm.orderId).then(function (order) {
         vm.order = order;
       });
     }

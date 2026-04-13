@@ -28,6 +28,7 @@ export async function getUserByEmail(email) {
       u.USER_ID,
       u.FULL_NAME,
       u.EMAIL,
+      u.PHONE,
       u.PASSWORD_HASH,
       u.ROLE,
       u.CREATED_AT,
@@ -49,6 +50,7 @@ export async function getUserById(userId) {
       u.USER_ID,
       u.FULL_NAME,
       u.EMAIL,
+      u.PHONE,
       u.PASSWORD_HASH,
       u.ROLE,
       u.CREATED_AT,
@@ -188,6 +190,15 @@ export async function updateProduct(prodId, { cat_id, prod_name, description, pr
   );
 }
 
+export async function updateProductImageUrl(prodId, imageUrl) {
+  await executeQuery(
+    `UPDATE PRODUCTS
+     SET IMAGE_URL = :imageUrl
+     WHERE PROD_ID = :prodId`,
+    { prodId, imageUrl }
+  );
+}
+
 export async function deleteProduct(prodId) {
   await executeQuery(`DELETE FROM PRODUCTS WHERE PROD_ID = :prodId`, { prodId });
 }
@@ -225,6 +236,55 @@ export async function adminGetAllOrders() {
      ORDER BY o.ORDERED_AT DESC`
   );
   return normalizeRows(result);
+}
+
+export async function cancelOrder(orderId, userId) {
+  const connection = await getConnection();
+
+  try {
+    await connection.beginTransaction();
+
+    const order = await connection.execute(
+      `SELECT ORDER_ID, ORDER_STATUS FROM ORDERS WHERE ORDER_ID = :orderId AND CUSTOMER_ID = :userId`,
+      { orderId, userId }
+    );
+
+    const rows = order[0];
+    if (!rows || rows.length === 0) {
+      throw new Error('Order not found');
+    }
+
+    const orderRow = rows[0];
+    if (orderRow.ORDER_STATUS === 'CANCELLED') {
+      return { order_id: orderId, status: 'CANCELLED' };
+    }
+
+    await connection.execute(
+      `UPDATE ORDERS SET ORDER_STATUS = 'CANCELLED', PAYMENT_STATUS = 'CANCELLED' WHERE ORDER_ID = :orderId`,
+      { orderId }
+    );
+
+    const itemsResult = await connection.execute(
+      `SELECT PROD_ID, QUANTITY FROM ORDER_ITEMS WHERE ORDER_ID = :orderId`,
+      { orderId }
+    );
+
+    const items = itemsResult[0] || [];
+    for (const item of items) {
+      await connection.execute(
+        `UPDATE PRODUCTS SET STOCK_QTY = STOCK_QTY + :quantity WHERE PROD_ID = :prodId`,
+        { quantity: item.QUANTITY, prodId: item.PROD_ID }
+      );
+    }
+
+    await connection.commit();
+    return { order_id: orderId, status: 'CANCELLED' };
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  } finally {
+    connection.release();
+  }
 }
 
 export async function getCategories() {
@@ -385,6 +445,7 @@ export async function getOrderById(orderId, userId) {
       o.POSTAL_CODE,
       o.CONTACT_PHONE,
       o.ORDERED_AT,
+      u.FULL_NAME,
       oi.PROD_ID,
       oi.QUANTITY,
       oi.UNIT_PRICE,
@@ -392,6 +453,7 @@ export async function getOrderById(orderId, userId) {
       p.IMAGE_URL,
       v.SHOP_NAME
     FROM ORDERS o
+    JOIN USERS u ON o.CUSTOMER_ID = u.USER_ID
     JOIN ORDER_ITEMS oi ON o.ORDER_ID = oi.ORDER_ID
     LEFT JOIN PRODUCTS p ON oi.PROD_ID = p.PROD_ID
     LEFT JOIN VENDORS v ON p.VENDOR_ID = v.VENDOR_ID
@@ -417,6 +479,7 @@ export async function getOrderById(orderId, userId) {
     status: first.ORDER_STATUS,
     created_at: first.ORDERED_AT,
     address: {
+      full_name: first.FULL_NAME,
       line1: first.ADDRESS_LINE1,
       city: first.CITY,
       state: first.STATE,

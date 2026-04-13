@@ -2,6 +2,7 @@
   angular.module('ShopSphereApp').service('AuthService', ['$http', '$q', '$rootScope', 'StateService', function ($http, $q, $rootScope, StateService) {
     var service = this;
     var user = StateService.get('shopsphere_user', null);
+    var apiBase = 'http://localhost:5000/api';
 
     function setUser(nextUser) {
       user = nextUser;
@@ -23,26 +24,26 @@
     };
 
     service.login = function (payload) {
-      return $http.post('/api/auth/login', payload).then(function (response) {
-        return setUser(response.data.user);
+      return $http.post(apiBase + '/auth/login', payload).then(function (response) {
+        return setUser(response.data.data.user);
       });
     };
 
     service.register = function (payload) {
-      return $http.post('/api/auth/register', payload).then(function (response) {
-        return response.data.user;
+      return $http.post(apiBase + '/auth/register', payload).then(function (response) {
+        return response.data.data.user;
       });
     };
 
     service.logout = function () {
-      return $http.post('/api/auth/logout').finally(function () {
+      return $http.post(apiBase + '/auth/logout').finally(function () {
         setUser(null);
       });
     };
 
     service.sync = function () {
-      return $http.get('/api/auth/me').then(function (response) {
-        return setUser(response.data.user);
+      return $http.get(apiBase + '/auth/me').then(function (response) {
+        return setUser(response.data.data.user);
       }).catch(function () {
         setUser(null);
         return $q.resolve(null);

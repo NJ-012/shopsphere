@@ -103,45 +103,6 @@
           controllerAs: 'vm',
           title: 'Create Account'
         })
-        .when('/studio', {
-          templateUrl: 'views/studio.html',
-          controller: 'StudioController',
-          controllerAs: 'vm',
-          title: 'Virtual Studio'
-        })
-        .when('/saved-looks', {
-          templateUrl: 'views/saved-looks.html',
-          controller: 'SavedLooksController',
-          controllerAs: 'vm',
-          title: 'Saved Looks'
-        })
-        .when('/vendor/dashboard', {
-          templateUrl: 'views/vendor/dashboard.html',
-          controller: 'VendorDashController',
-          controllerAs: 'vm',
-          title: 'Vendor Dashboard',
-          resolve: {
-            vendor: requireRoleFactory('VENDOR')
-          }
-        })
-        .when('/vendor/products', {
-          templateUrl: 'views/vendor/products.html',
-          controller: 'VendorProductsController',
-          controllerAs: 'vm',
-          title: 'Vendor Products',
-          resolve: {
-            vendor: requireRoleFactory('VENDOR')
-          }
-        })
-        .when('/vendor/orders', {
-          templateUrl: 'views/vendor/orders.html',
-          controller: 'VendorOrdersController',
-          controllerAs: 'vm',
-          title: 'Vendor Orders',
-          resolve: {
-            vendor: requireRoleFactory('VENDOR')
-          }
-        })
         .when('/admin/dashboard', {
           templateUrl: 'views/admin/dashboard.html',
           controller: 'AdminDashController',
@@ -178,5 +139,27 @@
         $window.scrollTo(0, 0);
         $window.document.title = 'ShopSphere | ' + (current.$$route && current.$$route.title ? current.$$route.title : 'Storefront');
       });
+      
+      // Dark Mode Toggle
+      const themeToggle = $window.document.getElementById('themeToggle');
+      const html = $window.document.documentElement;
+      
+      function initTheme() {
+        const savedTheme = localStorage.getItem('theme') || 'dark';
+        if (savedTheme === 'light') {
+          html.classList.add('light-mode');
+        } else {
+          html.classList.remove('light-mode');
+        }
+      }
+      
+      if (themeToggle) {
+        themeToggle.addEventListener('click', function() {
+          const isLight = html.classList.toggle('light-mode');
+          localStorage.setItem('theme', isLight ? 'light' : 'dark');
+        });
+      }
+      
+      initTheme();
     }]);
 }());

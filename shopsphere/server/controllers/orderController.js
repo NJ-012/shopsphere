@@ -3,6 +3,8 @@ import {
   createOrder as mysqlCreateOrder,
   getOrderById as mysqlGetOrderById,
   getUserOrders as mysqlGetUserOrders,
+  cancelOrder as mysqlCancelOrder,
+  getProductById as dbGetProductById,
 } from '../db/queries.js';
 import { sendOrderConfirmation } from '../utils/emailService.js';
 import { buildMockProductImage } from '../utils/mockImage.js';
@@ -23,7 +25,13 @@ function calculateTotals(items) {
 function normalizeOracleOrder(order) {
   const normalizedItems = (order.items ?? []).map((item) => ({
     ...item,
-    image_url: item.IMAGE_URL || item.image_url || buildMockProductImage(item),
+    image_url: (() => {
+      const imageUrl = item.IMAGE_URL || item.image_url;
+      if (imageUrl && !String(imageUrl).trim().startsWith('/images/')) {
+        return imageUrl;
+      }
+      return buildMockProductImage(item);
+    })(),
   }));
 
   return {
@@ -50,24 +58,56 @@ function normalizeOracleOrder(order) {
 
 export const createOrder = async (req, res) => {
   try {
-    const { address, items } = req.body;
+    const body = req.body || {};
+    const { address, items } = body;
 
     if (!address || !items || !Array.isArray(items) || items.length === 0) {
-      return res.status(400).json({ error: 'Address and at least one order item are required.' });
+      return res.status(400).json({ success: false, message: 'Address and at least one order item are required.' });
+    }
+
+    if (!address.line1 || !address.city || !address.state || !address.postal_code || !address.phone) {
+      return res.status(400).json({ success: false, message: 'Complete delivery address is required.' });
     }
 
     if (!isDbAvailable()) {
-       return res.status(500).json({ error: 'Database not available' });
+       return res.status(500).json({ success: false, message: 'Database not available' });
     }
 
-    const normalizedItems = items.map((item) => ({
-      prod_id: Number(item.prod_id),
-      quantity: Number(item.quantity),
-      unit_price: Number(item.unit_price || item.price || 0),
-      prod_name: item.prod_name || '',
-      image_url: item.image_url || buildMockProductImage(item),
-      shop_name: item.shop_name || '',
-    }));
+    const normalizedItems = [];
+
+    for (const item of items) {
+      const productId = Number(item.prod_id);
+      const quantity = Number(item.quantity);
+
+      if (!productId || !Number.isInteger(quantity) || quantity < 1) {
+        return res.status(400).json({ success: false, message: 'Each order item must include a valid product and quantity.' });
+      }
+
+      const product = await dbGetProductById(productId);
+      if (!product) {
+        return res.status(404).json({ success: false, message: `Product ${productId} was not found.` });
+      }
+
+      const stockQty = Number(product.STOCK_QTY ?? product.stock_qty ?? 0);
+      if (quantity > stockQty) {
+        return res.status(400).json({ success: false, message: `${product.PROD_NAME || product.prod_name} has only ${stockQty} items left in stock.` });
+      }
+
+      normalizedItems.push({
+        prod_id: productId,
+        quantity,
+        unit_price: Number(product.PRICE ?? product.price ?? 0),
+        prod_name: product.PROD_NAME || product.prod_name || item.prod_name || '',
+        image_url: (() => {
+          const imageUrl = product.IMAGE_URL || product.image_url || item.image_url;
+          if (imageUrl && !String(imageUrl).trim().startsWith('/images/')) {
+            return imageUrl;
+          }
+          return buildMockProductImage(product);
+        })(),
+        shop_name: product.SHOP_NAME || product.shop_name || item.shop_name || '',
+      });
+    }
 
     const totals = calculateTotals(normalizedItems);
     const orderResult = await mysqlCreateOrder(req.user.user_id, normalizedItems, address, totals);
@@ -102,24 +142,24 @@ export const createOrder = async (req, res) => {
       }
     } catch {}
 
-    res.status(201).json(createdOrder);
+    res.status(201).json({ success: true, data: createdOrder });
   } catch (error) {
     console.error('Create order error:', error);
-    res.status(error.status || 500).json({ error: error.message || 'Failed to create order.' });
+    res.status(error.status || 500).json({ success: false, message: error.message || 'Failed to create order.' });
   }
 };
 
 export const getMyOrders = async (req, res) => {
   try {
     if (!isDbAvailable()) {
-       return res.status(500).json({ error: 'Database not available' });
+       return res.status(500).json({ success: false, message: 'Database not available' });
     }
 
     const orders = await mysqlGetUserOrders(req.user.user_id);
-    return res.json(orders.map(normalizeOracleOrder));
+    return res.json({ success: true, data: orders.map(normalizeOracleOrder) });
   } catch (error) {
     console.error('Get orders error:', error);
-    res.status(500).json({ error: 'Failed to fetch your orders.' });
+    res.status(500).json({ success: false, message: 'Failed to fetch your orders.' });
   }
 };
 
@@ -128,21 +168,36 @@ export const getOrderById = async (req, res) => {
     const orderId = Number(req.params.id);
 
     if (!isDbAvailable()) {
-       return res.status(500).json({ error: 'Database not available' });
+       return res.status(500).json({ success: false, message: 'Database not available' });
     }
 
     const order = await mysqlGetOrderById(orderId, req.user.user_id);
     if (!order) {
-      return res.status(404).json({ error: 'Order not found.' });
+      return res.status(404).json({ success: false, message: 'Order not found.' });
     }
 
-    return res.json(normalizeOracleOrder(order));
+    return res.json({ success: true, data: normalizeOracleOrder(order) });
   } catch (error) {
     console.error('Get order error:', error);
-    res.status(500).json({ error: 'Failed to fetch order details.' });
+    res.status(500).json({ success: false, message: 'Failed to fetch order details.' });
   }
 };
 
 export const cancelOrder = async (req, res) => {
-  res.status(501).json({ error: 'Order cancellation is not implemented yet in MySQL schema.' });
+  try {
+    if (!isDbAvailable()) {
+      return res.status(500).json({ success: false, message: 'Database not available' });
+    }
+
+    const orderId = Number(req.params.id);
+    const result = await mysqlCancelOrder(orderId, req.user.user_id);
+
+    return res.json({ success: true, data: { message: 'Order cancelled', order_id: result.order_id, status: result.status } });
+  } catch (error) {
+    console.error('Cancel order error:', error);
+    if (error.message === 'Order not found') {
+      return res.status(404).json({ success: false, message: 'Order not found.' });
+    }
+    res.status(500).json({ success: false, message: 'Unable to cancel order.' });
+  }
 };

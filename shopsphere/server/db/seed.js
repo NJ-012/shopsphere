@@ -62,12 +62,12 @@ async function seed() {
 
     // ─── Categories ───
     const categories = [
-      { name: 'Electronics',   slug: 'electronics',   image: '/images/laptop.png'     },
-      { name: 'Fashion',       slug: 'fashion',       image: '/images/jacket.png'      },
-      { name: 'Home & Living', slug: 'home-living',   image: '/images/coffee.png'      },
-      { name: 'Sports',        slug: 'sports',        image: '/images/tee.png'         },
-      { name: 'Accessories',   slug: 'accessories',   image: '/images/monitor.png'    },
-      { name: 'Gaming',        slug: 'gaming',        image: '/images/controller.png'  },
+      { name: 'Electronics',   slug: 'electronics',   image: '' },
+      { name: 'Fashion',       slug: 'fashion',       image: '' },
+      { name: 'Home & Living', slug: 'home-living',   image: '' },
+      { name: 'Sports',        slug: 'sports',        image: '' },
+      { name: 'Accessories',   slug: 'accessories',   image: '' },
+      { name: 'Gaming',        slug: 'gaming',        image: '' },
     ];
 
     const catIds = {};
@@ -85,29 +85,29 @@ async function seed() {
     // ... (templates omitted for brevity, but I'll update the loop below)
     const productTemplates = {
       electronics: [
-        { name: 'UltraSlim Laptop', priceRange: [50000, 120000], image: '/images/laptop.png' },
-        { name: 'Wireless Earbuds', priceRange: [1500, 8000], image: '/images/earbuds.png' },
-        { name: '4K Curved Monitor', priceRange: [25000, 60000], image: '/images/monitor.png' },
+        { name: 'UltraSlim Laptop', priceRange: [50000, 120000], image: '' },
+        { name: 'Wireless Earbuds', priceRange: [1500, 8000], image: '' },
+        { name: '4K Curved Monitor', priceRange: [25000, 60000], image: '' },
       ],
       fashion: [
-        { name: 'Classic Denim Jacket', priceRange: [3000, 8000], image: '/images/jacket.png' },
-        { name: 'Graphic T‑Shirt', priceRange: [500, 1500], image: '/images/tee.png' },
+        { name: 'Classic Denim Jacket', priceRange: [3000, 8000], image: '' },
+        { name: 'Graphic T‑Shirt', priceRange: [500, 1500], image: '' },
       ],
       "home-living": [
-        { name: 'Smart Coffee Maker', priceRange: [6000, 15000], image: '/images/coffee.png' },
-        { name: 'Mechanical Keyboard', priceRange: [3000, 12000], image: '/images/keyboard.png' },
+        { name: 'Smart Coffee Maker', priceRange: [6000, 15000], image: '' },
+        { name: 'Mechanical Keyboard', priceRange: [3000, 12000], image: '' },
       ],
       sports: [
-        { name: 'Running Shoes', priceRange: [3000, 9000], image: '/images/tee.png' },
-        { name: 'Gym Backpack', priceRange: [1200, 3500], image: '/images/jacket.png' },
+        { name: 'Running Shoes', priceRange: [3000, 9000], image: '' },
+        { name: 'Gym Backpack', priceRange: [1200, 3500], image: '' },
       ],
       accessories: [
-        { name: 'Leather Crossbody Bag', priceRange: [4000, 12000], image: '/images/jacket.png' },
-        { name: 'Titanium Wristwatch', priceRange: [8000, 25000], image: '/images/monitor.png' },
+        { name: 'Leather Crossbody Bag', priceRange: [4000, 12000], image: '' },
+        { name: 'Titanium Wristwatch', priceRange: [8000, 25000], image: '' },
       ],
       gaming: [
-        { name: 'Pro Gaming Controller', priceRange: [3000, 8000], image: '/images/controller.png' },
-        { name: 'RGB Mechanical Keyboard', priceRange: [5000, 15000], image: '/images/keyboard.png' },
+        { name: 'Pro Gaming Controller', priceRange: [3000, 8000], image: '' },
+        { name: 'RGB Mechanical Keyboard', priceRange: [5000, 15000], image: '' },
       ],
     };
 
@@ -125,7 +125,7 @@ async function seed() {
           cat,
           name: `${tmpl.name} ${i + 1}`,
           price,
-          image: tmpl.image || catImages[cat] || '/images/laptop.png',
+          image: tmpl.image || catImages[cat] || '',
           featured,
           discount,
           desc,

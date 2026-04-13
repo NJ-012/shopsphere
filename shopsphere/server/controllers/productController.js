@@ -4,28 +4,28 @@ import {
   getProductById as dbGetProductById,
   createProduct as dbCreateProduct,
   updateProduct as dbUpdateProduct,
+  updateProductImageUrl as dbUpdateProductImageUrl,
   deleteProduct as dbDeleteProduct,
   getVendorProducts as dbGetVendorProducts,
   isDbAvailable,
 } from '../db/queries.js';
-import { buildMockProductImage } from '../utils/mockImage.js';
+import { isUsableProductImage, resolveProductImage } from '../services/imageService.js';
 
-function getProductImage(product) {
-  const imageUrl = product.IMAGE_URL || product.image_url;
-
-  if (imageUrl && String(imageUrl).trim()) {
-    return String(imageUrl).trim();
-  }
-
-  return buildMockProductImage(product);
-}
-
-function normalizeProduct(product) {
+async function normalizeProduct(product) {
   if (!product) return null;
   const prodId = product.PROD_ID || product.prod_id;
   const prodName = product.PROD_NAME || product.prod_name;
   const price = Number(product.PRICE ?? product.price ?? 0);
   const discountPct = Number(product.DISCOUNT_PCT ?? product.discount_pct ?? 0);
+  const imageUrl = await resolveProductImage(product);
+
+  if (!isUsableProductImage(product.IMAGE_URL || product.image_url) && prodId) {
+    try {
+      await dbUpdateProductImageUrl(prodId, imageUrl);
+    } catch (_error) {
+      // Non-blocking cache write: product responses should still succeed.
+    }
+  }
 
   return {
     prod_id: prodId,
@@ -39,7 +39,8 @@ function normalizeProduct(product) {
     shop_name: product.SHOP_NAME || product.shop_name || 'ShopSphere Select',
     cat_name: product.CAT_NAME || product.cat_name || 'Featured',
     cat_slug: product.CAT_SLUG || product.cat_slug || 'featured',
-    image_url: getProductImage(product),
+    image_url: imageUrl,
+    image: imageUrl,
     discount_pct: discountPct,
     current_price: Math.round(price * (1 - discountPct / 100)),
     is_active: Boolean(product.IS_ACTIVE ?? product.is_active ?? true),
@@ -58,7 +59,7 @@ function normalizeCategory(category, index = 0) {
 export async function getAllProducts(req, res) {
   try {
     const { category = '', q: search = '', featured = 'false' } = req.query;
-    if (!isDbAvailable()) return res.status(500).json({ error: 'Database not available' });
+    if (!isDbAvailable()) return res.status(500).json({ success: false, message: 'Database not available' });
 
     const products = await dbGetAllProducts({
       category,
@@ -67,46 +68,46 @@ export async function getAllProducts(req, res) {
       limit: 50,
     });
 
-    res.json(products.map(normalizeProduct));
+    res.json({ success: true, data: await Promise.all(products.map(normalizeProduct)) });
   } catch (error) {
     console.error('Get products error:', error);
-    res.status(500).json({ error: 'Failed to fetch products.' });
+    res.status(500).json({ success: false, message: 'Failed to fetch products.' });
   }
 }
 
 export async function getProductById(req, res) {
   try {
     const productId = Number(req.params.id);
-    if (!isDbAvailable()) return res.status(500).json({ error: 'Database not available' });
+    if (!isDbAvailable()) return res.status(500).json({ success: false, message: 'Database not available' });
 
     const product = await dbGetProductById(productId);
-    if (!product) return res.status(404).json({ error: 'Product not found.' });
+    if (!product) return res.status(404).json({ success: false, message: 'Product not found.' });
 
-    res.json(normalizeProduct(product));
+    res.json({ success: true, data: await normalizeProduct(product) });
   } catch (error) {
     console.error('Get product error:', error);
-    res.status(500).json({ error: 'Failed to fetch product details.' });
+    res.status(500).json({ success: false, message: 'Failed to fetch product details.' });
   }
 }
 
 export async function getFeaturedProducts(_req, res) {
   try {
-    if (!isDbAvailable()) return res.status(500).json({ error: 'Database not available' });
+    if (!isDbAvailable()) return res.status(500).json({ success: false, message: 'Database not available' });
     const products = await dbGetAllProducts({ featured: true, limit: 8 });
-    res.json(products.map(normalizeProduct));
+    res.json({ success: true, data: await Promise.all(products.map(normalizeProduct)) });
   } catch (error) {
     console.error('Featured products error:', error);
-    res.status(500).json({ error: 'Failed to fetch featured products.' });
+    res.status(500).json({ success: false, message: 'Failed to fetch featured products.' });
   }
 }
 
 export async function getCategories(_req, res) {
   try {
-    if (!isDbAvailable()) return res.status(500).json({ error: 'Database not available' });
+    if (!isDbAvailable()) return res.status(500).json({ success: false, message: 'Database not available' });
     const categories = await dbGetCategories();
-    res.json(categories.map((c, i) => normalizeCategory(c, i)));
+    res.json({ success: true, data: categories.map((c, i) => normalizeCategory(c, i)) });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch categories' });
+    res.status(500).json({ success: false, message: 'Failed to fetch categories' });
   }
 }
 
@@ -115,7 +116,7 @@ export async function getVendorProducts(req, res) {
     const vendorId = req.user.vendor_id;
     if (!vendorId) return res.status(403).json({ error: 'Vendor profile not found' });
     const products = await dbGetVendorProducts(vendorId);
-    res.json(products.map(normalizeProduct));
+    res.json(await Promise.all(products.map(normalizeProduct)));
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch vendor products' });
   }

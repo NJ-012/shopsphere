@@ -17,20 +17,23 @@
     };
 
     vm.placeOrder = function () {
+      if (!vm.items.length) {
+        vm.error = 'Your cart is empty.';
+        return;
+      }
+
       vm.processing = true;
+      vm.error = null;
+
       OrderService.createOrder({
         address: vm.address,
         items: vm.items
       }).then(function (order) {
-        return OrderService.createPaymentOrder({ amount: order.final_amount, order_id: order.order_id }).then(function () {
-          return OrderService.verifyPayment({ razorpay_payment_id: 'mock_payment_' + Date.now(), order_id: order.order_id });
-        }).then(function () {
-          CartService.clear();
-          StateService.pushToast('Order confirmed', 'Payment succeeded and your order is now confirmed.', 'success');
-          $location.path('/orders/' + order.order_id);
-        });
+        CartService.clear();
+        StateService.pushToast('Order confirmed', 'Your order has been placed successfully.', 'success');
+        $location.path('/orders/' + order.order_id);
       }).catch(function (error) {
-        vm.error = error.data && error.data.error ? error.data.error : 'Checkout failed.';
+        vm.error = error.data && error.data.message ? error.data.message : 'Checkout failed.';
       }).finally(function () {
         vm.processing = false;
       });

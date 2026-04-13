@@ -1,6 +1,7 @@
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
 dotenv.config();
+const jwtSecret = process.env.JWT_SECRET || 'secret123';
 
 export const protect = async (req, res, next) => {
   let token;
@@ -12,7 +13,7 @@ export const protect = async (req, res, next) => {
       return res.status(401).json({ error: 'Not authenticated' });
     }
     
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, jwtSecret);
     req.user = {
       user_id: decoded.user_id,
       role: decoded.role,
@@ -35,7 +36,7 @@ export const optionalProtect = async (req, _res, next) => {
       return next();
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, jwtSecret);
     req.user = {
       user_id: decoded.user_id,
       role: decoded.role,

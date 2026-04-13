@@ -9,7 +9,6 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="css/main.css" />
-    <link rel="stylesheet" href="css/studio.css" />
     <link rel="stylesheet" href="css/animations.css" />
   </head>
   <body ng-controller="AppController as app" ng-cloak>
@@ -22,13 +21,12 @@
         <ul class="nav-links" ng-class="{ open: nav.menuOpen }">
           <li><a ng-class="{ active: nav.isActive('/') }" href="#/">Home</a></li>
           <li><a ng-class="{ active: nav.isActive('/shop') }" href="#/shop">Shop</a></li>
-          <li><a ng-class="{ active: nav.isActive('/studio') }" href="#/studio">Studio</a></li>
           <li><a ng-class="{ active: nav.isActive('/orders') }" href="#/orders">Orders</a></li>
           <li><a ng-class="{ active: nav.isActive('/wishlist') }" href="#/wishlist">Wishlist</a></li>
-          <li ng-if="nav.user && nav.user.role === 'VENDOR'"><a href="#/vendor/dashboard">Vendor</a></li>
           <li ng-if="nav.user && nav.user.role === 'ADMIN'"><a href="#/admin/dashboard">Admin</a></li>
         </ul>
         <div class="nav-actions">
+          <button class="theme-toggle" type="button" id="themeToggle" aria-label="Toggle dark/light mode" title="Toggle theme"></button>
           <a class="chip-link" href="#/cart">Cart <span class="chip-count">{{ nav.cartCount }}</span></a>
           <a class="chip-link" href="#/profile" ng-if="nav.user">{{ nav.user.full_name || 'Profile' }}</a>
           <a class="btn btn-outline" href="#/login" ng-if="!nav.user">Sign in</a>
@@ -59,8 +57,6 @@
         </section>
         <nav aria-label="Footer links">
           <a href="#/shop">Shop</a>
-          <a href="#/studio">Virtual Studio</a>
-          <a href="#/vendor/dashboard">Vendor Hub</a>
           <a href="#/admin/dashboard">Admin Center</a>
         </nav>
         <section>
@@ -80,8 +76,6 @@
     <script type="module" src="services/productService.js"></script>
     <script type="module" src="services/cartService.js"></script>
     <script type="module" src="services/orderService.js"></script>
-    <script type="module" src="services/studioService.js"></script>
-
     <script type="module" src="controllers/appController.js"></script>
     <script type="module" src="controllers/navController.js"></script>
     <script type="module" src="controllers/authController.js"></script>
@@ -93,17 +87,11 @@
     <script type="module" src="controllers/orderController.js"></script>
     <script type="module" src="controllers/profileController.js"></script>
     <script type="module" src="controllers/wishlistController.js"></script>
-    <script type="module" src="controllers/studioController.js"></script>
-    <script type="module" src="controllers/savedLooksController.js"></script>
-    <script type="module" src="controllers/vendor/vendorDashController.js"></script>
-    <script type="module" src="controllers/vendor/vendorProductsController.js"></script>
-    <script type="module" src="controllers/vendor/vendorOrdersController.js"></script>
     <script type="module" src="controllers/admin/adminDashController.js"></script>
     <script type="module" src="controllers/admin/adminVendorsController.js"></script>
     <script type="module" src="controllers/admin/adminUsersController.js"></script>
 
     <script type="module" src="directives/productCard.js"></script>
     <script type="module" src="directives/starRating.js"></script>
-    <script type="module" src="directives/draggableItem.js"></script>
   </body>
 </html>

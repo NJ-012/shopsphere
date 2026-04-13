@@ -9,7 +9,7 @@
       template:
         '<article class="product-card" ng-mousemove="tilt($event)" ng-mouseleave="resetTilt()">' +
         '  <a class="product-image-link" ng-href="#/product/{{product.prod_id}}">' +
-        '    <img ng-src="{{product.image_url}}" alt="{{product.prod_name}}" class="product-image" />' +
+        '    <img ng-src="{{product.image_url || product.image}}" alt="{{product.prod_name}}" class="product-image" ng-onerror="fallbackImage($event)" />' +
         '    <div class="image-overlay"></div>' +
         '    <span class="quick-view-label">Quick View</span>' +
         '    <span ng-if="product.discount_pct" class="badge badge-sale">{{product.discount_pct}}% OFF</span>' +
@@ -49,10 +49,41 @@
           card.style.transform = '';
         };
 
+        scope.fallbackImage = function(event) {
+          const img = event.target;
+          const altText = img.alt.toLowerCase();
+          let keywords = 'product,shopping';
+          
+          // Contextual keywords based on product name
+          if (altText.includes('shirt') || altText.includes('tshirt') || altText.includes('tee')) {
+            keywords = 'shirt,clothing,fashion';
+          } else if (altText.includes('laptop')) {
+            keywords = 'laptop,computer,electronics';
+          } else if (altText.includes('tv') || altText.includes('sony')) {
+            keywords = 'television,electronics,tv';
+          } else if (altText.includes('coffee') || altText.includes('maker')) {
+            keywords = 'coffee,machine,kitchen';
+          } else if (altText.includes('phone') || altText.includes('smartphone')) {
+            keywords = 'smartphone,phone,mobile';
+          } else if (altText.includes('jacket') || altText.includes('denim')) {
+            keywords = 'jacket,clothing,fashion';
+          } else if (altText.includes('earbuds') || altText.includes('headphones')) {
+            keywords = 'headphones,earbuds,electronics';
+          } else if (altText.includes('keyboard')) {
+            keywords = 'keyboard,computer';
+          } else if (altText.includes('monitor')) {
+            keywords = 'monitor,computer,display';
+          }
+          
+          img.src = `https://source.unsplash.com/featured/500x600/?${keywords}&w=500&h=600`;
+          img.onerror = null; // Prevent loop
+        };
+
         scope.add = function () {
           CartService.addItem(scope.product, 1);
           StateService.pushToast('Added to cart', scope.product.prod_name + ' was added to your cart.', 'success');
         };
+        
         scope.save = function () {
           var ids = StateService.get('shopsphere_wishlist', []);
           if (ids.indexOf(scope.product.prod_id) === -1) {
