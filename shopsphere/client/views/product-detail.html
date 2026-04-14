@@ -1,6 +1,6 @@
 <section class="shell detail-grid" ng-if="vm.product">
   <figure class="detail-media">
-    <img ng-src="{{ vm.product.image_url || vm.product.image }}" alt="{{ vm.product.prod_name }}" ng-onerror="vm.fallbackDetailImage($event.target)" />
+    <product-image src="vm.product.image_url || vm.product.image" alt="vm.product.prod_name" prod-id="vm.product.prod_id"></product-image>
   </figure>
   <article class="detail-copy">
     <p class="eyebrow">{{ vm.product.cat_name }} | {{ vm.product.shop_name }}</p>

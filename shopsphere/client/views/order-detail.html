@@ -13,7 +13,7 @@
     </article>
     <article>
       <div class="list-card" ng-repeat="item in vm.order.items track by item.prod_id">
-        <img ng-src="{{ item.image_url }}" alt="{{ item.prod_name }}" onerror="this.src='https://source.unsplash.com/featured/?product'" />
+        <img ng-src="{{ item.image_url }}" alt="{{ item.prod_name }}" img-fallback img-fallback-name="{{ item.prod_name }}" />
         <div>
           <h3>{{ item.prod_name }}</h3>
           <p>Quantity: {{ item.quantity }}</p>

@@ -531,18 +531,66 @@ h1, h2, h3, .brand, .display-title, .hero-title {
   display: block;
   position: relative;
   overflow: hidden;
+  aspect-ratio: 4 / 5;
+  background: var(--surface);
+  border-radius: var(--radius);
 }
 
-.product-image, .product-image-link img {
+.product-image-container {
+  position: relative;
   width: 100%;
-  aspect-ratio: 4 / 5;
+  height: 100%;
+  overflow: hidden;
+  border-radius: var(--radius);
+}
+
+.product-image-container img {
+  width: 100%;
+  height: 100%;
   object-fit: cover;
   transition: transform 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: var(--radius);
 }
 
-.product-card:hover .product-image,
-.product-card:hover .product-image-link img {
+.product-card:hover .product-image-container img {
   transform: scale(1.08);
+}
+
+/* Skeleton loader */
+.skeleton-loader {
+  position: absolute;
+  inset: 0;
+  background: var(--surface);
+  border-radius: var(--radius);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.skeleton-shimmer {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.1),
+    transparent
+  );
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.product-image-container.is-loaded .skeleton-loader {
+  display: none;
+}
+
+.product-image-container.has-error img {
+  opacity: 0.7;
 }
 
 /* Semi-transparent overlay on hover */
@@ -783,9 +831,17 @@ input::placeholder { color: var(--muted); }
   margin-bottom: 2rem;
 }
 
+.detail-media {
+  aspect-ratio: 4 / 5;
+  background: var(--surface);
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius);
+}
+
 .detail-media img {
   width: 100%;
-  aspect-ratio: 4 / 5;
+  height: 100%;
   object-fit: cover;
   border-radius: var(--radius);
 }
@@ -1082,4 +1138,53 @@ code {
 .studio-layout {
   display: grid;
   gap: 1.5rem;
+}
+
+/* ═══════════════════════════════════════
+   IMAGE HANDLING (COMPONENTS)
+   ═══════════════════════════════════════ */
+.product-image-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: var(--surface);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.skeleton-loader {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.05) 25%,
+    rgba(255, 255, 255, 0.1) 50%,
+    rgba(255, 255, 255, 0.05) 75%
+  );
+  background-size: 200% 100%;
+  animation: skeletonPulse 1.5s infinite linear;
+  z-index: 1;
+}
+
+@keyframes skeletonPulse {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.product-image-container img {
+  opacity: 0;
+  transition: opacity 0.5s ease;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.product-image-container.is-loaded img {
+  opacity: 1;
+}
+
+.product-image-container.is-loaded .skeleton-loader {
+  display: none;
 }

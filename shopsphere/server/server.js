@@ -2,11 +2,16 @@ import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { initPool, isDbAvailable, getDbInitError } from './db/db.js';
 import authRoutes from './routes/authRoutes.js';
 import orderRoutes from './routes/orderRoutes.js';
 import productRoutes from './routes/productRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 dotenv.config();
 
@@ -17,6 +22,7 @@ const allowedOrigins = [
   'http://localhost:5173',
   'http://127.0.0.1:5173',
   'http://10.168.32.251:5173',
+  'http://10.166.84.58:5173',
   'http://localhost:8080',
   'http://127.0.0.1:8080',
   'http://localhost:3000',
@@ -41,6 +47,9 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cors(corsOptions));
 app.options(/.*/, cors(corsOptions));
 app.use(cookieParser());
+
+// Serve static files from client directory
+app.use(express.static(path.join(__dirname, '../client')));
 
 app.get('/api/status', (_req, res) => {
   res.json({

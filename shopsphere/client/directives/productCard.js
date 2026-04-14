@@ -4,12 +4,13 @@
       restrict: 'E',
       scope: {
         product: '=',
-        compact: '@'
+        compact: '@',
+        mode: '@'
       },
       template:
         '<article class="product-card" ng-mousemove="tilt($event)" ng-mouseleave="resetTilt()">' +
         '  <a class="product-image-link" ng-href="#/product/{{product.prod_id}}">' +
-        '    <img ng-src="{{product.image_url || product.image}}" alt="{{product.prod_name}}" class="product-image" ng-onerror="fallbackImage($event)" />' +
+        '    <product-image src="product.image_url || product.image" alt="product.prod_name" prod-id="product.prod_id"></product-image>' +
         '    <div class="image-overlay"></div>' +
         '    <span class="quick-view-label">Quick View</span>' +
         '    <span ng-if="product.discount_pct" class="badge badge-sale">{{product.discount_pct}}% OFF</span>' +
@@ -23,9 +24,13 @@
         '      <strong class="current-price">Rs. {{product.current_price || product.price}}</strong>' +
         '      <span ng-if="product.discount_pct" class="original-price">Rs. {{product.price}}</span>' +
         '    </div>' +
-        '    <div class="card-actions">' +
+        '    <div class="card-actions" ng-if="mode !== \'wishlist\'">' +
         '      <button class="btn btn-primary btn-glow" type="button" ng-click="add()">🛒 Add to cart</button>' +
         '      <button class="btn btn-ghost" type="button" ng-click="save()">♡ Save</button>' +
+        '    </div>' +
+        '    <div class="card-actions" ng-if="mode === \'wishlist\'">' +
+        '      <button class="btn btn-primary" type="button" ng-click="moveToCart()">Move to cart</button>' +
+        '      <button class="btn btn-ghost" type="button" ng-click="remove()">Remove</button>' +
         '    </div>' +
         '  </div>' +
         '</article>',
@@ -49,36 +54,6 @@
           card.style.transform = '';
         };
 
-        scope.fallbackImage = function(event) {
-          const img = event.target;
-          const altText = img.alt.toLowerCase();
-          let keywords = 'product,shopping';
-          
-          // Contextual keywords based on product name
-          if (altText.includes('shirt') || altText.includes('tshirt') || altText.includes('tee')) {
-            keywords = 'shirt,clothing,fashion';
-          } else if (altText.includes('laptop')) {
-            keywords = 'laptop,computer,electronics';
-          } else if (altText.includes('tv') || altText.includes('sony')) {
-            keywords = 'television,electronics,tv';
-          } else if (altText.includes('coffee') || altText.includes('maker')) {
-            keywords = 'coffee,machine,kitchen';
-          } else if (altText.includes('phone') || altText.includes('smartphone')) {
-            keywords = 'smartphone,phone,mobile';
-          } else if (altText.includes('jacket') || altText.includes('denim')) {
-            keywords = 'jacket,clothing,fashion';
-          } else if (altText.includes('earbuds') || altText.includes('headphones')) {
-            keywords = 'headphones,earbuds,electronics';
-          } else if (altText.includes('keyboard')) {
-            keywords = 'keyboard,computer';
-          } else if (altText.includes('monitor')) {
-            keywords = 'monitor,computer,display';
-          }
-          
-          img.src = `https://source.unsplash.com/featured/500x600/?${keywords}&w=500&h=600`;
-          img.onerror = null; // Prevent loop
-        };
-
         scope.add = function () {
           CartService.addItem(scope.product, 1);
           StateService.pushToast('Added to cart', scope.product.prod_name + ' was added to your cart.', 'success');
@@ -91,6 +66,19 @@
             StateService.set('shopsphere_wishlist', ids);
             StateService.pushToast('Saved', scope.product.prod_name + ' was saved to wishlist.', 'info');
           }
+        };
+
+        scope.moveToCart = function () {
+          CartService.addItem(scope.product, 1);
+          var ids = StateService.get('shopsphere_wishlist', []).filter(function (id) { return id !== scope.product.prod_id; });
+          StateService.set('shopsphere_wishlist', ids);
+          StateService.pushToast('Moved to cart', scope.product.prod_name + ' is now in your cart.', 'success');
+        };
+
+        scope.remove = function () {
+          var ids = StateService.get('shopsphere_wishlist', []).filter(function (id) { return id !== scope.product.prod_id; });
+          StateService.set('shopsphere_wishlist', ids);
+          StateService.pushToast('Removed', scope.product.prod_name + ' was removed from wishlist.', 'info');
         };
       }
     };

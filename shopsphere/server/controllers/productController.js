@@ -17,9 +17,15 @@ async function normalizeProduct(product) {
   const prodName = product.PROD_NAME || product.prod_name;
   const price = Number(product.PRICE ?? product.price ?? 0);
   const discountPct = Number(product.DISCOUNT_PCT ?? product.discount_pct ?? 0);
-  const imageUrl = await resolveProductImage(product);
+  const currentImageUrl = product.IMAGE_URL || product.image_url;
+  
+  // Force regeneration for old pollinations.ai URLs or missing images
+  const needsNewImage = !isUsableProductImage(currentImageUrl) || 
+                       (currentImageUrl && currentImageUrl.includes('pollinations.ai'));
+  
+  const imageUrl = needsNewImage ? await resolveProductImage(product) : currentImageUrl;
 
-  if (!isUsableProductImage(product.IMAGE_URL || product.image_url) && prodId) {
+  if (needsNewImage && prodId) {
     try {
       await dbUpdateProductImageUrl(prodId, imageUrl);
     } catch (_error) {

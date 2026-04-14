@@ -4,16 +4,6 @@
     <span>{{ vm.products.length }} saved items</span>
   </div>
   <div class="product-grid">
-    <article class="product-card" ng-repeat="product in vm.products track by product.prod_id">
-      <img ng-src="{{ product.image_url }}" alt="{{ product.prod_name }}" class="product-image" onerror="this.src='https://source.unsplash.com/featured/?product'" />
-      <div class="product-content">
-        <h3>{{ product.prod_name }}</h3>
-        <p>{{ product.shop_name }}</p>
-        <div class="card-actions">
-          <button class="btn btn-primary" type="button" ng-click="vm.moveToCart(product)">Move to cart</button>
-          <button class="btn btn-ghost" type="button" ng-click="vm.remove(product.prod_id)">Remove</button>
-        </div>
-      </div>
-    </article>
+    <product-card ng-repeat="product in vm.products track by product.prod_id" product="product" mode="wishlist"></product-card>
   </div>
 </section>
